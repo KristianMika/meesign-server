@@ -21,4 +21,4 @@ COPY ./target/x86_64-unknown-linux-musl/release/meesign-server /meesign-server
 
 EXPOSE ${SERVER_PORT}
 
-CMD ["/meesign-server"]
+CMD ["/meesign-server", "--addr", "0.0.0.0"]
