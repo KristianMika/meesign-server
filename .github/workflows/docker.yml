@@ -47,7 +47,7 @@ jobs:
         # If the workflow contains a tag, set a version docker tag in format "user/project:tag"
         id: version_tag
         if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
-        run: echo "::set-output name=version_tag::${{ inputs.dockerhub_username }}/${{ inputs.project_name}}:${{ steps.tag.outputs.tag }}"
+        run: echo "::set-output name=version_tag::${{ inputs.dockerhub_username }}/${{ inputs.project_name}}:${{ steps.tagName.outputs.tag }}"
       - name: Build and Push
         uses: docker/build-push-action@v2
         with:
@@ -58,5 +58,5 @@ jobs:
           context: .
           build-args: |
             BUILD_DATE=${{ steps.vars.outputs.curr_date }}
-            BUILD_VERSION=${{ steps.tag.outputs.tag }}
+            BUILD_VERSION=${{ steps.tagName.outputs.tag }}
             REVISION=${{ steps.vars.outputs.commit_hash }}
