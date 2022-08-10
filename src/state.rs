@@ -10,6 +10,7 @@ use crate::protocols::gg18::{GG18Group, GG18Sign};
 use log::{warn, error};
 
 pub struct State {
+    devices:HashMap<Vec<u8>, Device> , // TODO: remove
     groups: HashMap<Vec<u8>, Group>,
     tasks: HashMap<Uuid, Box<dyn Task + Send + Sync>>,
     pub meesign_repo: PostgresMeesignRepo
@@ -18,6 +19,7 @@ pub struct State {
 impl State {
     pub fn new() -> Self {
         State {
+            devices: HashMap::new(),
             groups: HashMap::new(),
             tasks: HashMap::new(),
             meesign_repo: PostgresMeesignRepo::init().expect("Coudln't initialize Posgtres MeeSign repo.")
@@ -114,8 +116,8 @@ impl State {
         Ok(())
     }
 
-    pub fn get_devices(&self) -> anyhow::Result<Vec<Device>> {
-        self.meesign_repo.get_devices()
+    pub async fn get_devices(&self) -> anyhow::Result<Vec<Device>> {
+        self.meesign_repo.get_devices().await 
     }
 
     pub fn device_activated(&mut self, device_id: &[u8]) {

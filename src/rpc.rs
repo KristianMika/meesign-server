@@ -29,7 +29,7 @@ impl Mpc for MPCService {
 
         let state = self.state.lock().await;
 
-        match state.meesign_repo.add_device(&identifier, &name) {
+        match state.meesign_repo.add_device(&identifier, &name).await {
             Ok(_) => Ok(Response::new(msg::Resp { message: "OK".into() })),
             Err(e) => {
                 warn!("{}", e);
@@ -150,7 +150,7 @@ impl Mpc for MPCService {
     async fn get_devices(&self, _request: Request<msg::DevicesRequest>) -> Result<Response<msg::Devices>, Status> {
         debug!("DevicesRequest");
 
-        match self.state.lock().await.meesign_repo.get_devices() {
+        match self.state.lock().await.meesign_repo.get_devices().await {
             Ok(devices) => {
                 let response = msg::Devices {
                     devices: devices.iter().map(|device| msg::Device::from(device)).collect()
