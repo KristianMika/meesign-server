@@ -5,6 +5,7 @@ table! {
     device (identifier) {
         identifier -> Bytea,
         device_name -> Varchar,
+        last_active -> Timestamp,
     }
 }
 
@@ -62,10 +63,4 @@ joinable!(groupparticipant -> signinggroup (group_id));
 joinable!(task -> signinggroup (group_id));
 joinable!(taskresult -> signinggroup (signing_group));
 
-allow_tables_to_appear_in_same_query!(
-    device,
-    groupparticipant,
-    signinggroup,
-    task,
-    taskresult,
-);
+allow_tables_to_appear_in_same_query!(device, groupparticipant, signinggroup, task, taskresult,);

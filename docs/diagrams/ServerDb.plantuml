@@ -8,6 +8,7 @@ entity "Device" as device {
     * identifier : bytea
     --
     device_name: varchar
+    last_active: bigint
 }
 
 entity "Group Participant" as group_pariticipant {

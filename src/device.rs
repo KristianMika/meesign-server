@@ -1,21 +1,13 @@
-use std::time::{SystemTime, UNIX_EPOCH};
-
-#[derive(Clone, Eq)]
+use chrono::{NaiveDateTime, Utc};
+#[derive(Queryable, Clone, Eq, Debug)]
 pub struct Device {
     identifier: Vec<u8>,
     name: String,
-    last_active: u64,
+    last_active: NaiveDateTime,
     // protocol: ProtocolType
 }
 
 impl Device {
-    pub fn new(identifier: Vec<u8>, name: String) -> Self {
-        Device {
-            identifier,
-            name,
-            last_active: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs()
-        }
-    }
 
     pub fn identifier(&self) -> &[u8] {
         &self.identifier
@@ -26,11 +18,11 @@ impl Device {
     }
 
     pub fn last_active(&self) -> u64 {
-        self.last_active
+        self.last_active.timestamp() as u64
     }
 
-    pub fn activated(&mut self) -> u64 {
-        self.last_active = SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs();
+    pub fn activated(&mut self) -> NaiveDateTime {
+        self.last_active = Utc::now().naive_utc();
         self.last_active
     }
 }

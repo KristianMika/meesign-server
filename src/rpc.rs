@@ -6,7 +6,7 @@ use tokio::sync::Mutex;
 use crate::task::{TaskStatus, TaskType, Task};
 use uuid::Uuid;
 use crate::protocols::ProtocolType;
-use log::{debug, info};
+use log::{debug, info, warn};
 use crate::proto as msg;
 
 pub struct MPCService {
@@ -27,12 +27,14 @@ impl Mpc for MPCService {
         let name = request.name;
         info!("RegistrationRequest device_id={} name={:?}", hex::encode(&identifier), name);
 
-        let mut state = self.state.lock().await;
+        let state = self.state.lock().await;
 
-        if state.add_device(&identifier, &name) {
-            Ok(Response::new(msg::Resp { message: "OK".into() }))
-        } else {
-            Err(Status::failed_precondition("Request failed"))
+        match state.meesign_repo.add_device(&identifier, &name) {
+            Ok(_) => Ok(Response::new(msg::Resp { message: "OK".into() })),
+            Err(e) => {
+                warn!("{}", e);
+                Err(Status::failed_precondition("Request failed"))
+            }
         }
     }
 
@@ -148,10 +150,18 @@ impl Mpc for MPCService {
     async fn get_devices(&self, _request: Request<msg::DevicesRequest>) -> Result<Response<msg::Devices>, Status> {
         debug!("DevicesRequest");
 
-        let resp = msg::Devices {
-            devices: self.state.lock().await.get_devices().values().map(|device| msg::Device::from(device)).collect()
-        };
-        Ok(Response::new(resp))
+        match self.state.lock().await.meesign_repo.get_devices() {
+            Ok(devices) => {
+                let response = msg::Devices {
+                    devices: devices.iter().map(|device| msg::Device::from(device)).collect()
+                };
+                Ok(Response::new(response))
+            }
+            Err(err) => {
+                warn!("{}", err);
+                Err(Status::failed_precondition("Request failed"))
+            }
+        }
     }
 
     async fn log(&self, request: Request<msg::LogRequest>) -> Result<Response<msg::Resp>, Status> {

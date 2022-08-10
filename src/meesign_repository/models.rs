@@ -1,13 +1,5 @@
-
-use crate::meesign_repository::enums::ProtocolType;
 use super::schema::*;
-
-
-#[derive(Queryable, Clone, PartialEq, Eq, Debug)]
-pub struct Device {
-    pub identifier: Vec<u8>,
-    pub device_name: String,
-}
+use crate::meesign_repository::enums::ProtocolType;
 
 #[derive(Insertable)]
 #[table_name = "device"]
@@ -16,8 +8,6 @@ pub struct NewDevice<'a> {
     pub device_name: &'a str,
 }
 
-
-
 #[derive(Queryable, Clone, Eq, PartialEq)]
 pub struct Group {
     pub identifier: Vec<u8>,
@@ -25,4 +15,3 @@ pub struct Group {
     pub threshold: i32,
     pub protocol: ProtocolType,
 }
-

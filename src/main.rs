@@ -8,7 +8,6 @@ mod meesign_repository;
 
 #[macro_use]
 extern crate diesel;
-extern crate dotenv;
 
 mod proto {
     tonic::include_proto!("meesign");
@@ -16,6 +15,7 @@ mod proto {
 
 use crate::state::State;
 use clap::{Parser, Subcommand};
+use dotenv::dotenv;
 use crate::proto::mpc_client::MpcClient;
 use std::time::SystemTime;
 
@@ -196,6 +196,7 @@ async fn request_sign(server: String, name: String, group_id: Vec<u8>, data: Vec
 #[tokio::main]
 async fn main() -> Result<(), String> {
     env_logger::init();
+    dotenv().ok();
     let args = Args::parse();
     if let Some(command) = args.command {
         let server = format!("http://{}:{}", &args.addr, args.port);

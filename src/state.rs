@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use crate::meesign_repository::PostgresMeesignRepo;
 use crate::task::{Task, TaskStatus, TaskResult};
 use crate::group::Group;
 use crate::device::Device;
@@ -9,34 +10,18 @@ use crate::protocols::gg18::{GG18Group, GG18Sign};
 use log::{warn, error};
 
 pub struct State {
-    devices: HashMap<Vec<u8>, Device>,
     groups: HashMap<Vec<u8>, Group>,
     tasks: HashMap<Uuid, Box<dyn Task + Send + Sync>>,
+    pub meesign_repo: PostgresMeesignRepo
 }
 
 impl State {
     pub fn new() -> Self {
         State {
-            devices: HashMap::new(),
             groups: HashMap::new(),
             tasks: HashMap::new(),
+            meesign_repo: PostgresMeesignRepo::init().expect("Coudln't initialize Posgtres MeeSign repo.")
         }
-    }
-
-    pub fn add_device(&mut self, identifier: &[u8], name: &str) -> bool {
-        if name.chars().count() > 64 || name.chars().any(|x| x.is_ascii_punctuation() || x.is_control()) {
-            warn!("Invalid Device name {}", name);
-            return false
-        }
-
-        let device = Device::new(identifier.to_vec(), name.to_owned());
-        // TODO improve when feature map_try_insert gets stabilized
-        if self.devices.contains_key(identifier) {
-            warn!("Device identifier already registered {}", hex::encode(identifier));
-            return false
-        }
-        self.devices.insert(identifier.to_vec(), device);
-        true
     }
 
     pub fn add_group_task(&mut self, name: &str, devices: &[Vec<u8>], threshold: u32, protocol: ProtocolType) -> Option<Uuid> {
@@ -129,8 +114,8 @@ impl State {
         Ok(())
     }
 
-    pub fn get_devices(&self) -> &HashMap<Vec<u8>, Device> {
-        &self.devices
+    pub fn get_devices(&self) -> anyhow::Result<Vec<Device>> {
+        self.meesign_repo.get_devices()
     }
 
     pub fn device_activated(&mut self, device_id: &[u8]) {
