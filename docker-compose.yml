@@ -1,0 +1,24 @@
+version: '3.1'
+ 
+services:
+ 
+  meesign:
+    image: crocs-muni/meesign:latest
+    ports: 
+      - 1337:1337
+    volumes:
+      - ${PWD}/server-key.pem:/meesign/server-key.pem
+      - ${PWD}/server-cert.pem:/meesign/server-cert.pem
+
+  db:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_PASSWORD: example
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    ports:
+      - 5432:5432
+       
+volumes:
+  db-data:

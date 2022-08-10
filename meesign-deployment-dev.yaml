@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: meesign-deployment
+  labels:
+    app: meesign
+spec:
+  replicas: 1 # as the server is not stateless, we must operate on a single instance
+  selector:
+    matchLabels:
+      app: meesign
+  template:
+    metadata:
+      labels:
+        app: meesign
+    spec:
+      containers:
+      - name: meesign
+        image: crocs-muni/meesign:nightly
+        ports:
+        - containerPort: 1337

@@ -4,6 +4,11 @@ mod group;
 mod device;
 mod protocols;
 mod state;
+mod meesign_repository;
+
+#[macro_use]
+extern crate diesel;
+extern crate dotenv;
 
 mod proto {
     tonic::include_proto!("meesign");
