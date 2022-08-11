@@ -2,7 +2,6 @@ use crate::device::Device;
 use crate::meesign_repository::models::Group;
 use self::models::{NewDevice};
 use anyhow::bail;
-use async_trait::async_trait;
 use chrono::Utc;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
@@ -28,7 +27,7 @@ pub fn establish_connection() -> PgConnection {
 }
 
 
-#[async_trait]
+#[tonic::async_trait]
 pub trait MeesignRepo {
     async fn add_device<'a>(&self, identifier: &'a Vec<u8>, device_name: &'a str) -> anyhow::Result<Device>;
     async fn activate_device<'a>(&self, identifier: &'a Vec<u8>) -> anyhow::Result<()>;
@@ -71,6 +70,7 @@ impl PostgresMeesignRepo {
             .get_result(&self.pg_pool.get().unwrap())?;
         Ok(device)
     }
+
 
     pub async fn activate_device<'a>(&self, target_identifier: &'a Vec<u8>) -> anyhow::Result<()> {
         use schema::device::dsl::*;

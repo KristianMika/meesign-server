@@ -29,6 +29,8 @@ table! {
         group_name -> Varchar,
         threshold -> Int4,
         protocol -> Protocoltype,
+        round -> Int4,
+        group_certificate -> Nullable<Bytea>,
     }
 }
 
@@ -63,4 +65,10 @@ joinable!(groupparticipant -> signinggroup (group_id));
 joinable!(task -> signinggroup (group_id));
 joinable!(taskresult -> signinggroup (signing_group));
 
-allow_tables_to_appear_in_same_query!(device, groupparticipant, signinggroup, task, taskresult,);
+allow_tables_to_appear_in_same_query!(
+    device,
+    groupparticipant,
+    signinggroup,
+    task,
+    taskresult,
+);

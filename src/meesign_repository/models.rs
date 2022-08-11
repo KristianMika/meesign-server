@@ -14,4 +14,6 @@ pub struct Group {
     pub name: String,
     pub threshold: i32,
     pub protocol: ProtocolType,
+    pub round: i32,
+    pub group_certificate: Option<Vec<u8>>
 }
