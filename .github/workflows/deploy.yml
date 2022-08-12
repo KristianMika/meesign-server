@@ -1,0 +1,15 @@
+# Deploys to k8s
+name: Deploy base
+
+on: [push]
+
+jobs:
+  deploy-to-k8s:
+    name: Deploy to k8s
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v2
+      - name: Instantiate deployment template
+        run: IMAGE_TO_DEPLOY="kristianmika/meesign:nightly" envsubst < manifests/meesign-deployment-prod.yaml.tmpl > manifests/meesign-deployment-prod.yaml
+      - name: Apply the configuration
+        run: microk8s kubectl apply -f manifests/meesign-deployment-prod.yaml
