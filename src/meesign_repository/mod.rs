@@ -1,11 +1,16 @@
 use crate::device::Device;
-use crate::meesign_repository::models::Group;
+use crate::group;
+use crate::meesign_repository::models::{Group, NewSigningGroup};
+use crate::meesign_repository::schema::signinggroup;
+use self::enums::ProtocolType;
 use self::models::{NewDevice};
 use anyhow::bail;
 use chrono::Utc;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use diesel::r2d2::{ConnectionManager, Pool, PoolError};
+use log::warn;
+use uuid::Uuid;
 use std::env;
 use std::sync::Arc;
 
@@ -26,14 +31,26 @@ pub fn establish_connection() -> PgConnection {
     PgConnection::establish(&database_url).expect(&format!("Error connecting to {}", database_url))
 }
 
+fn to_vec(bytes: &[u8;16]) -> Vec<u8> {
+    let mut out = Vec::new();
+
+    bytes.iter().for_each(|b| {
+        out.push(b.clone());
+    });
+
+    out
+}
 
 #[tonic::async_trait]
 pub trait MeesignRepo {
+    /* Devices */
     async fn add_device<'a>(&self, identifier: &'a Vec<u8>, device_name: &'a str) -> anyhow::Result<Device>;
     async fn activate_device<'a>(&self, identifier: &'a Vec<u8>) -> anyhow::Result<()>;
     async fn get_device(&self, identifier: &Vec<u8>) -> Option<Device>;
     async fn get_devices(&self) -> anyhow::Result<Vec<Device>>;
 
+    /* Groups */
+    async fn add_group<'a>(&self, name: &str, devices: &[Vec<u8>], threshold: u32, protocol: ProtocolType) -> anyhow::Result<Group>;
     async fn get_group(&self, group_identifier: &Vec<u8>) -> Option<Group>;
 }
 
@@ -75,10 +92,12 @@ impl PostgresMeesignRepo {
     pub async fn activate_device<'a>(&self, target_identifier: &'a Vec<u8>) -> anyhow::Result<()> {
         use schema::device::dsl::*;
 
-        // TODO
-        // let _ = diesel::update(device.filter(identifier.eq(target_identifier)))
-        //         .set(last_active.eq(Utc::now().naive_utc()))
-        //         .get_result(&self.pg_pool.get().unwrap())?;
+        let rows_affected = diesel::update(device.filter(identifier.eq(target_identifier)))
+                .set(last_active.eq(Utc::now().naive_utc()))
+                .execute(&self.pg_pool.get().unwrap())?;
+        if rows_affected != 1 {
+            warn!("Activate device affected {} rows.", rows_affected);
+        }
         Ok(())
     }
     pub async fn get_devices(&self) -> anyhow::Result<Vec<Device>> {
@@ -99,6 +118,28 @@ impl PostgresMeesignRepo {
             .expect("Error loading posts");
 
         Some(result[0].clone())
+    }
+
+
+    async fn add_group<'a>(&self, name: &str, devices: &[Vec<u8>], _threshold: u32, protocol: ProtocolType) -> anyhow::Result<Group> {
+
+        let uuid = Uuid::new_v4();
+        let uuid = uuid.as_bytes();
+        
+        let new_group = NewSigningGroup{
+            identifier: &to_vec(uuid),
+            group_name: name,
+            threshold: _threshold as i32 ,
+            protocol:protocol,
+            round: 0,
+            group_certificate: None,
+        };
+
+        let created_group = diesel::insert_into(signinggroup::table)
+        .values(new_group)
+        .get_result(&self.pg_pool.get().unwrap())?;
+
+        Ok(created_group)
     }
 
     pub async fn get_group(&self, group_identifier: &Vec<u8>) -> Option<Group> {

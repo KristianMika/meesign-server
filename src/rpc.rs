@@ -5,7 +5,7 @@ use crate::state::State;
 use tokio::sync::Mutex;
 use crate::task::{TaskStatus, TaskType, Task};
 use uuid::Uuid;
-use crate::protocols::ProtocolType;
+use crate::meesign_repository::enums::ProtocolType;
 use log::{debug, info, warn};
 use crate::proto as msg;
 

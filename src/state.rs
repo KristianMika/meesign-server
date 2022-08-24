@@ -5,7 +5,7 @@ use crate::task::{Task, TaskStatus, TaskResult};
 use crate::group::Group;
 use crate::device::Device;
 use uuid::Uuid;
-use crate::protocols::ProtocolType;
+use crate::meesign_repository::enums::ProtocolType;
 use crate::protocols::gg18::{GG18Group, GG18Sign};
 use log::{warn, error};
 

@@ -1,6 +1,6 @@
 use std::cmp::Eq;
 use std::collections::HashMap;
-use crate::protocols::ProtocolType;
+use crate::meesign_repository::enums::ProtocolType;
 use crate::device::Device;
 
 #[derive(Clone, Eq)]

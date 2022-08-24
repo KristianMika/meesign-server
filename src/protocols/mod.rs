@@ -2,10 +2,6 @@ pub mod gg18;
 use prost::Message;
 use crate::proto::Gg18Message;
 
-#[derive(Copy, Clone, PartialEq, Eq)]
-pub enum ProtocolType {
-    GG18,
-}
 
 struct Communicator {
     parties: usize,
