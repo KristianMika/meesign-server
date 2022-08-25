@@ -14,6 +14,9 @@ on:
       docker_tags:
         required: false
         type: string
+      host:
+        required: true
+        type: string
 
     secrets:
       DOCKERHUB_TOKEN:
@@ -21,8 +24,8 @@ on:
 
 jobs:
   build-and-publish-image:
+    runs-on: ${{ inputs.host }}
     name: Docker build & release
-    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
       - name: Set up QEMU

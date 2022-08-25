@@ -14,7 +14,7 @@ RUN cargo build --release --target x86_64-unknown-linux-musl
 
 # Use a clean container to run the binary 
 # note it must be a JRE image for meesign helper
-FROM eclipse-temurin:11-jre-alpine as runner
+FROM eclipse-temurin:11-jre-jammy as runner
 COPY --from=rust-builder /home/rust/src/target/x86_64-unknown-linux-musl/release/meesign-server /usr/local/bin/meesign-server
 COPY --from=java-builder /meesign-helper/target/signPDF-1.0-SNAPSHOT-jar-with-dependencies.jar /meesign/MeeSignHelper.jar
 

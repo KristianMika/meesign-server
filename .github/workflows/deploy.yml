@@ -10,6 +10,7 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - name: Instantiate deployment template
-        run: IMAGE_TO_DEPLOY="kristianmika/meesign:nightly" envsubst < manifests/meesign-deployment-prod.yaml.tmpl > manifests/meesign-deployment-prod.yaml
+        run: |
+          IMAGE_TO_DEPLOY="kristianmika/meesign:nightly" envsubst < manifests/meesign-deployment-prod.yaml.tmpl | tee manifests/meesign-deployment-prod.yaml
       - name: Apply the configuration
         run: microk8s kubectl apply -f manifests/meesign-deployment-prod.yaml

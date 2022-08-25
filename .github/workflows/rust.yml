@@ -24,14 +24,18 @@ jobs:
       run: cargo test --verbose
 
   build-n-release-docker-stable:
-    needs: build
+    # needs: build
     name: Docker stable
+    strategy:
+      matrix:
+        arch: [ubuntu-latest, self-hosted]
     # only tagged versions
-    if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
+    # if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
     uses: ./.github/workflows/docker.yml
     secrets: inherit
     with:
-      dockerhub_username: crocs-muni
+      dockerhub_username: kristianmika
       project_name: meesign
       docker_tags: |
-        crocs-muni/meesign:latest
+        kristianmika/meesign:latest
+      host: ${{matrix.arch}}
