@@ -6,16 +6,19 @@ RUN cd meesign-helper && mvn clean compile assembly:single
 
 
 # Build and statically link the meesign binary
-FROM ekidd/rust-musl-builder:stable as rust-builder
+FROM messense/rust-musl-cross:aarch64-musl as rust-builder
+# x86_64-unknown-linux-musl or aarch64-unknown-linux-musl
+ARG TARGET
 WORKDIR /home/rust/src/
 ADD --chown=rust:rust . .
-RUN cargo build --release --target x86_64-unknown-linux-musl
+RUN rustup target add ${TARGET}
+RUN cargo build --release --target ${TARGET}
 
 
 # Use a clean container to run the binary 
 # note it must be a JRE image for meesign helper
 FROM eclipse-temurin:11-jre-jammy as runner
-COPY --from=rust-builder /home/rust/src/target/x86_64-unknown-linux-musl/release/meesign-server /usr/local/bin/meesign-server
+COPY --from=rust-builder /home/rust/src/target/${TARGET}/release/meesign-server /usr/local/bin/meesign-server
 COPY --from=java-builder /meesign-helper/target/signPDF-1.0-SNAPSHOT-jar-with-dependencies.jar /meesign/MeeSignHelper.jar
 
 ARG SERVER_PORT=1337

@@ -14,9 +14,6 @@ on:
       docker_tags:
         required: false
         type: string
-      host:
-        required: true
-        type: string
 
     secrets:
       DOCKERHUB_TOKEN:
@@ -24,7 +21,10 @@ on:
 
 jobs:
   build-and-publish-image:
-    runs-on: ${{ inputs.host }}
+    strategy:
+      matrix:
+        platform: [ {target: aarch64-unknown-linux-musl, platform: linux/aarch64}, {target: x86_64-unknown-linux-musl, platform: linux/amd64} ]
+    runs-on: ubuntu-latest
     name: Docker build & release
     steps:
       - uses: actions/checkout@v2
@@ -63,3 +63,5 @@ jobs:
             BUILD_DATE=${{ steps.vars.outputs.curr_date }}
             BUILD_VERSION=${{ steps.tagName.outputs.tag }}
             REVISION=${{ steps.vars.outputs.commit_hash }}
+            TARGET=${{ matrix.platform.target }}
+          platforms: ${{ matrix.platform.platform }}
