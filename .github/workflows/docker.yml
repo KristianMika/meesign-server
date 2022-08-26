@@ -23,7 +23,7 @@ jobs:
   build-and-publish-image:
     strategy:
       matrix:
-        platform: [ {image: "messense/rust-musl-cross:aarch64-musl", target: aarch64-unknown-linux-musl, platform: linux/aarch64}, {image: "ekidd/rust-musl-builder:stable", target: x86_64-unknown-linux-musl, platform: linux/amd64} ]
+        arch: [aarch64, amd64] 
     runs-on: ubuntu-latest
     name: Docker build & release
     steps:
@@ -51,6 +51,12 @@ jobs:
         id: version_tag
         if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
         run: echo "::set-output name=version_tag::${{ inputs.dockerhub_username }}/${{ inputs.project_name}}:${{ steps.tagName.outputs.tag }}"
+      - name: Download goenv templator
+        run: |
+          wget https://github.com/seznam/goenvtemplator/releases/download/v2.1.0/goenvtemplator2-amd64 -O /usr/local/bin/goenvtemplator2
+          chmod +x /usr/local/bin/goenvtemplator2
+      - name: Instantiate dockerfile template
+        run: goenvtemplator2 -env-file docker/${{ matrix.arch }}.conf -template ./docker/Dockerfile.in:./Dockerfile && cat ./Dockerfile
       - name: Build and Push
         uses: docker/build-push-action@v2
         with:
@@ -63,6 +69,4 @@ jobs:
             BUILD_DATE=${{ steps.vars.outputs.curr_date }}
             BUILD_VERSION=${{ steps.tagName.outputs.tag }}
             REVISION=${{ steps.vars.outputs.commit_hash }}
-            TARGET=${{ matrix.platform.target }}
-            RUST_BUILDER_IMAGE=${{ matrix.platform.image }}
-          platforms: ${{ matrix.platform.platform }}
+          platforms: linux/${{ matrix.arch }}
