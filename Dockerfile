@@ -6,12 +6,12 @@ RUN cd meesign-helper && mvn clean compile assembly:single
 
 
 # Build and statically link the meesign binary
-FROM messense/rust-musl-cross:aarch64-musl as rust-builder
+ARG RUST_BUILDER_IMAGE
+FROM ${RUST_BUILDER_IMAGE} as rust-builder
 # x86_64-unknown-linux-musl or aarch64-unknown-linux-musl
 ARG TARGET
 WORKDIR /home/rust/src/
 ADD --chown=rust:rust . .
-RUN rustup target add ${TARGET}
 RUN cargo build --release --target ${TARGET}
 
 

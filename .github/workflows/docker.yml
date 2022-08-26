@@ -23,7 +23,7 @@ jobs:
   build-and-publish-image:
     strategy:
       matrix:
-        platform: [ {target: aarch64-unknown-linux-musl, platform: linux/aarch64}, {target: x86_64-unknown-linux-musl, platform: linux/amd64} ]
+        platform: [ {image: "messense/rust-musl-cross:aarch64-musl", target: aarch64-unknown-linux-musl, platform: linux/aarch64}, {image: "ekidd/rust-musl-builder:stable", target: x86_64-unknown-linux-musl, platform: linux/amd64} ]
     runs-on: ubuntu-latest
     name: Docker build & release
     steps:
@@ -64,4 +64,5 @@ jobs:
             BUILD_VERSION=${{ steps.tagName.outputs.tag }}
             REVISION=${{ steps.vars.outputs.commit_hash }}
             TARGET=${{ matrix.platform.target }}
+            RUST_BUILDER_IMAGE=${{ matrix.platform.image }}
           platforms: ${{ matrix.platform.platform }}
