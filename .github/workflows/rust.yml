@@ -23,7 +23,7 @@ jobs:
     - name: Run tests
       run: cargo test --verbose
 
-  build-n-release-docker-stable:
+  docker-stable:
     needs: build
     name: Docker stable
     # only tagged versions
@@ -31,7 +31,6 @@ jobs:
     uses: ./.github/workflows/docker.yml
     secrets: inherit
     with:
-      dockerhub_username: crocs-muni
+      dockerhub_username: kristianmika
       project_name: meesign
-      docker_tags: |
-        crocs-muni/meesign:latest
+      docker_tag: kristianmika/meesign:latest
