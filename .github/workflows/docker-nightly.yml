@@ -14,5 +14,4 @@ jobs:
     with:
       dockerhub_username: crocs-muni
       project_name: meesign
-      docker_tags: |
-        crocs-muni/meesign:nightly
+      docker_tags: crocs-muni/meesign:nightly

@@ -11,7 +11,7 @@ on:
       project_name:
         required: true
         type: string
-      docker_tags:
+      docker_tag:
         required: false
         type: string
 
@@ -46,11 +46,13 @@ jobs:
         run: |
           echo "::set-output name=commit_hash::$(git rev-parse HEAD)"
           echo "::set-output name=curr_date::$(date --rfc-3339=seconds)"
-      - name: Set the version tag
-        # If the workflow contains a tag, set a version docker tag in format "user/project:tag"
+      - name: Set the version tags
+        # If the workflow contains a tag, set version docker tags in format "user/project:tag" and "user/project:tag-arch" 
         id: version_tag
         if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
-        run: echo "::set-output name=version_tag::${{ inputs.dockerhub_username }}/${{ inputs.project_name}}:${{ steps.tagName.outputs.tag }}"
+        run: |
+          echo "::set-output name=version_tag_arch::${{ inputs.dockerhub_username }}/${{ inputs.project_name}}:${{ steps.tagName.outputs.tag }}-${{ matrix.arch }}"
+          echo "::set-output name=version_tag::${{ inputs.dockerhub_username }}/${{ inputs.project_name}}:${{ steps.tagName.outputs.tag }}"
       - name: Download goenv templator
         run: |
           wget https://github.com/seznam/goenvtemplator/releases/download/v2.1.0/goenvtemplator2-amd64 -O /usr/local/bin/goenvtemplator2
@@ -63,10 +65,41 @@ jobs:
           push: true
           tags: |
             ${{ steps.version_tag.outputs.version_tag }}
-            ${{ inputs.docker_tags }}
+            ${{ steps.version_tag.outputs.version_tag_arch }}
+            ${{ inputs.docker_tag }}-${{ matrix.arch }}
+            ${{ inputs.docker_tag }}
           context: .
           build-args: |
             BUILD_DATE=${{ steps.vars.outputs.curr_date }}
             BUILD_VERSION=${{ steps.tagName.outputs.tag }}
             REVISION=${{ steps.vars.outputs.commit_hash }}
           platforms: linux/${{ matrix.arch }}
+
+  merge-images:
+    # needs: build-and-publish-image
+    runs-on: ubuntu-latest
+    steps:
+      - name: Login to DockerHub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ inputs.dockerhub_username }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - uses: olegtarasov/get-tag@v2.1
+        id: tagName
+      - name: Set version tags
+        id: version_tag
+        if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
+        run: echo "::set-output name=version_tag::${{ inputs.dockerhub_username }}/${{ inputs.project_name}}:${{ steps.tagName.outputs.tag }}"
+      - name: Set amend options for versioned images
+        id: version_amends
+        if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
+        run: echo "::set-output name=version_amends::$(echo '--amend ${{ steps.version_tag.outputs.version_tag }}'-{aarch64,amd64})"
+      - name: Merge untagged releases 
+        run: |
+          docker manifest create ${{ inputs.docker_tag }} $(echo "--amend ${{ inputs.docker_tag }}"-{aarch64,amd64}) ${{ steps.version_amends.outputs.version_amends }}
+          docker manifest push ${{ inputs.docker_tag }}
+      - name: Merge tagged releases 
+        if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
+        run: |
+          docker manifest create  ${{ steps.version_tag.outputs.version_tag }} $(echo "--amend ${{ steps.version_tag.outputs.version_tag }}"-{aarch64,amd64}) $(echo "--amend ${{ inputs.docker_tag }}"-{aarch64,amd64}) 
+          docker manifest push ${{ steps.version_tag.outputs.version_tag }}
