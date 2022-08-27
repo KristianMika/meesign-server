@@ -49,5 +49,5 @@ jobs:
     with:
       dockerhub_username: crocsmuni
       project_name: meesign
-      docker_tags: |
+      docker_tag:
         crocsmuni/meesign:latest
