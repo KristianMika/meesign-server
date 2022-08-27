@@ -1,0 +1,22 @@
+# Deploys to k8s
+name: K8s base
+
+on:
+  workflow_call:
+
+    inputs:
+      docker_tag:
+        required: true
+        type: string
+
+jobs:
+  k8s-deploy:
+    name: Deploy to k8s
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v2
+      - name: Instantiate deployment template
+        run: |
+          IMAGE_TO_DEPLOY=${{ inputs.docker_tag }} envsubst < manifests/meesign-deployment-prod.yaml.in | tee manifests/meesign-deployment-prod.yaml
+      - name: Apply the configuration
+        run: microk8s kubectl apply -f manifests/meesign-deployment-prod.yaml

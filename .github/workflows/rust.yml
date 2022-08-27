@@ -34,3 +34,10 @@ jobs:
       dockerhub_username: kristianmika
       project_name: meesign
       docker_tag: kristianmika/meesign:latest
+      
+  k8s-stable:
+    needs: docker-stable
+    name: K8s stable
+    uses: ./.github/workflows/k8s.yml
+    with:
+      docker_tag: kristianmika/meesign:latest
