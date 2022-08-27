@@ -1,9 +1,9 @@
 name: Nightly release
 
-on:
-  schedule:
-    # every midnight
-    - cron: '0 0 * * *'
+on: [push]
+  # schedule:
+  #   # every midnight
+  #   - cron: '0 0 * * *'
 jobs:
   build-n-release-docker-nightly:
     name: Docker nightly
