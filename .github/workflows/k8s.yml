@@ -1,5 +1,5 @@
 # Deploys to k8s
-name: K8s base
+name: K8s deploy
 
 on:
   workflow_call:
@@ -19,4 +19,4 @@ jobs:
         run: |
           IMAGE_TO_DEPLOY=${{ inputs.docker_tag }} envsubst < manifests/meesign-deployment-prod.yaml.in | tee manifests/meesign-deployment-prod.yaml
       - name: Apply the configuration
-        run: microk8s kubectl apply -f manifests/meesign-deployment-prod.yaml
+        run: microk8s kubectl apply -f manifests/meesign-deployment-prod.yaml -f manifests/meesign-service-prod.yaml

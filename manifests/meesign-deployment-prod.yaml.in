@@ -14,8 +14,18 @@ spec:
       labels:
         app: meesign
     spec:
+      volumes:
+      - name: secret-volume
+        secret:
+          secretName: private-key
+      terminationGracePeriodSeconds: 30
       containers:
       - name: meesign
         image: ${IMAGE_TO_DEPLOY}
+        imagePullPolicy: "Always"
         ports:
         - containerPort: 1337
+        volumeMounts:
+        - name: secret-volume
+          readOnly: true
+          mountPath: "/meesign/keys/"
