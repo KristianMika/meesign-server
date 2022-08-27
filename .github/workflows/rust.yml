@@ -33,5 +33,4 @@ jobs:
     with:
       dockerhub_username: kristianmika
       project_name: meesign
-      docker_tags: |
-        kristianmika/meesign:latest
+      docker_tag: kristianmika/meesign:latest

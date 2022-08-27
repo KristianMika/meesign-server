@@ -10,13 +10,19 @@ FROM {{ required "RUST_BUILDER_IMAGE must be set!" (env "RUST_BUILDER_IMAGE") }}
 # x86_64-unknown-linux-musl or aarch64-unknown-linux-musl
 WORKDIR /home/rust/src/
 ADD --chown=rust:rust . .
-RUN cargo build --release --target {{ required "TARGET must be set!" (env "TARGET") }}
+###################################
+###################################
+#TODO: add --release after testing!
+###################################
+###################################
+RUN cargo build --target {{ required "TARGET must be set!" (env "TARGET") }}
 
 
 # Use a clean container to run the binary 
 # note it must be a JRE image for meesign helper
 FROM eclipse-temurin:11-jre-jammy as runner
-COPY --from=rust-builder /home/rust/src/target/{{ required "TARGET must be set!" (env "TARGET") }}/release/meesign-server /usr/local/bin/meesign-server
+# TODO: /release
+COPY --from=rust-builder /home/rust/src/target/{{ required "TARGET must be set!" (env "TARGET") }}/debug/meesign-server /usr/local/bin/meesign-server
 COPY --from=java-builder /meesign-helper/target/signPDF-1.0-SNAPSHOT-jar-with-dependencies.jar /meesign/MeeSignHelper.jar
 
 ARG SERVER_PORT=1337
