@@ -18,6 +18,8 @@ tempfile = "3.3.0"
 lazy_static = "1.4.0"
 openssl = "0.10.42"
 sha2 = "0.10.6"
+diesel = { version = "2.0.0", features = ["postgres"] }
+dotenvy = "0.15"
 
 [build-dependencies]
 tonic-build = "0.8.2"
