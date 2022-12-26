@@ -1,8 +1,11 @@
 use std::collections::HashMap;
 
+use error_stack::ResultExt;
 use log::{error, warn};
 use uuid::Uuid;
 
+use crate::db::postgres::PostgresMeesignRepo;
+use crate::db::{DbAccessError, MeesignRepo};
 use crate::device::Device;
 use crate::group::Group;
 use crate::interfaces::grpc::format_task;
@@ -21,6 +24,7 @@ pub struct State {
     groups: HashMap<Vec<u8>, Group>,
     tasks: HashMap<Uuid, Box<dyn Task + Send + Sync>>,
     subscribers: HashMap<Vec<u8>, Sender<Result<crate::proto::Task, Status>>>,
+    pub meesign_repo: PostgresMeesignRepo,
 }
 
 impl State {
@@ -30,31 +34,32 @@ impl State {
             groups: HashMap::new(),
             tasks: HashMap::new(),
             subscribers: HashMap::new(),
+            meesign_repo: PostgresMeesignRepo::new().unwrap(),
         }
     }
 
-    pub fn add_device(&mut self, identifier: &[u8], name: &str, certificate: &[u8]) -> bool {
-        if name.chars().count() > 64
-            || name
-                .chars()
-                .any(|x| x.is_ascii_punctuation() || x.is_control())
-        {
-            warn!("Invalid Device name {}", name);
-            return false;
-        }
+    // pub fn add_device(&mut self, identifier: &[u8], name: &str, certificate: &[u8]) -> bool {
+    //     if name.chars().count() > 64
+    //         || name
+    //             .chars()
+    //             .any(|x| x.is_ascii_punctuation() || x.is_control())
+    //     {
+    //         warn!("Invalid Device name {}", name);
+    //         return false;
+    //     }
 
-        let device = Device::new(identifier.to_vec(), name.to_owned(), certificate.to_vec());
-        // TODO improve when feature map_try_insert gets stabilized
-        if self.devices.contains_key(identifier) {
-            warn!(
-                "Device identifier already registered {}",
-                hex::encode(identifier)
-            );
-            return false;
-        }
-        self.devices.insert(identifier.to_vec(), Arc::new(device));
-        true
-    }
+    //     let device = Device::new(identifier.to_vec(), name.to_owned(), certificate.to_vec());
+    //     // TODO improve when feature map_try_insert gets stabilized
+    //     if self.devices.contains_key(identifier) {
+    //         warn!(
+    //             "Device identifier already registered {}",
+    //             hex::encode(identifier)
+    //         );
+    //         return false;
+    //     }
+    //     self.devices.insert(identifier.to_vec(), Arc::new(device));
+    //     true
+    // }
 
     pub fn add_group_task(
         &mut self,
@@ -224,12 +229,17 @@ impl State {
         &self.devices
     }
 
-    pub fn device_activated(&self, device_id: &[u8]) {
-        if let Some(device) = self.devices.get(device_id) {
-            device.activated();
-        } else {
-            error!("Unknown Device ID {}", hex::encode(device_id));
-        }
+    pub async fn activate_device(
+        &self,
+        device_id: &[u8],
+    ) -> error_stack::Result<(), DbAccessError> {
+        self.meesign_repo
+            .activate_device(&device_id.to_vec())
+            .await
+            .attach_printable(format!(
+                "Coudln't activate device with ID {}",
+                hex::encode(device_id)
+            ))
     }
 
     pub fn restart_task(&mut self, task_id: &Uuid) -> bool {

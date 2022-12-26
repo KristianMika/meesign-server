@@ -44,7 +44,7 @@ fn check_subscribers(state: &mut MutexGuard<State>) {
             );
             remove.push(device_id.clone());
         } else {
-            state.device_activated(device_id);
+            state.activate_device(device_id);
         }
     }
     for device_id in remove {

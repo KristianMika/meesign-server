@@ -2,7 +2,8 @@
 # see https://diesel.rs/guides/configuring-diesel-cli
 
 [print_schema]
-file = "src/schema.rs"
+file = "src/db/postgres/schema.rs"
+import_types = ["diesel::sql_types::*", "crate::db::enums::*"]
 
 [migrations_directory]
 dir = "migrations"

@@ -1,0 +1,83 @@
+@startuml meesign-erd
+
+skinparam linetype ortho
+
+entity "Device" as device {
+    * id: integer <<generated>>
+    --
+    identifier: bytea
+    device_name: varchar
+    certificate bytea
+    last_active: bigint
+}
+
+entity "Group Participant" as group_pariticipant {
+    * id: integer <<generated>>
+    --
+    device_id: bytea
+    group_id: bytea
+}
+
+entity "SigningGroup" as group {
+    * id: integer<<generated>>
+    --
+    identifier: bytea
+    group_name: varchar
+    threshold: integer
+    round: integer
+
+}
+
+enum "ProtocolType" as protocol_type {
+    GG18
+}
+
+enum "KeyType" as key_type {
+    SignPDF
+    SignChallenge
+}
+
+
+entity "Task" as task {
+    * id: integer <<generated>>
+    --
+    round: integer
+    error_message: varchar
+}
+
+enum "TaskType" as task_type {
+    Group
+    SignPdf
+    SignChallenge
+}
+
+enum "TaskState" as stask_state {
+    Created
+    Running
+    Finished
+    Failed
+}
+
+entity "TaskResult" as task_result {
+    * id: integer <<generated>>
+    --
+    signed_data: bytea
+}
+
+enum "TaskResultType" as task_result_type {
+    GroupEstablished
+    Signed
+}
+
+group ||..o{ group_pariticipant: < participates in
+group }o..|| key_type: is using >
+group_pariticipant }o..|| device: < is a participant
+group }o..|| protocol_type: > is of type
+task }o..|| task_type: > is of type
+group ||..o{ task: > contains
+task }o..|| stask_state: > is in state
+task_result }o..o| group : > group established
+task_result }o..|| task_result_type: > is of type
+
+
+@enduml

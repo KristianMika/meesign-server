@@ -14,6 +14,7 @@ use tonic::transport::{Certificate, ClientTlsAuth, Identity, Server, ServerTlsCo
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
 
+use crate::db::MeesignRepo;
 use crate::proto::mpc_server::{Mpc, MpcServer};
 use crate::proto::{KeyType, ProtocolType};
 use crate::state::State;
@@ -56,19 +57,22 @@ impl Mpc for MPCService {
         let csr = request.csr;
         info!("RegistrationRequest name={:?}", name);
 
-        let mut state = self.state.lock().await;
+        let state = self.state.lock().await;
 
         if let Ok(certificate) = issue_certificate(&name, &csr) {
             let device_id = cert_to_id(&certificate);
-            if state.add_device(&device_id, &name, &certificate) {
-                Ok(Response::new(msg::RegistrationResponse {
+            match state
+                .meesign_repo
+                .add_device(&device_id, &name, &certificate)
+                .await
+            {
+                Ok(_) => Ok(Response::new(msg::RegistrationResponse {
                     device_id,
                     certificate,
-                }))
-            } else {
-                Err(Status::failed_precondition(
+                })),
+                Err(_) => Err(Status::failed_precondition(
                     "Request failed: device was not added",
-                ))
+                )),
             }
         } else {
             Err(Status::failed_precondition(
@@ -116,7 +120,10 @@ impl Mpc for MPCService {
 
         let state = self.state.lock().await;
         if device_id.is_some() {
-            state.device_activated(device_id.as_ref().unwrap());
+            state
+                .activate_device(device_id.as_ref().unwrap())
+                .await
+                .unwrap();
         }
         let task = state.get_task(&task_id).unwrap();
         let request = Some(task.get_request());
@@ -149,7 +156,7 @@ impl Mpc for MPCService {
         );
 
         let mut state = self.state.lock().await;
-        state.device_activated(&device_id);
+        state.activate_device(&device_id).await.unwrap();
         let result = state.update_task(&task_id, &device_id, &data, attempt);
 
         match result {
@@ -174,7 +181,7 @@ impl Mpc for MPCService {
 
         let state = self.state.lock().await;
         let tasks = if let Some(device_id) = device_id {
-            state.device_activated(&device_id);
+            state.activate_device(&device_id).await.unwrap();
             state
                 .get_device_tasks(&device_id)
                 .iter()
@@ -205,7 +212,7 @@ impl Mpc for MPCService {
 
         let state = self.state.lock().await;
         let groups = if let Some(device_id) = device_id {
-            state.device_activated(&device_id);
+            state.activate_device(&device_id).await.unwrap();
             state
                 .get_device_groups(&device_id)
                 .iter()
@@ -286,7 +293,9 @@ impl Mpc for MPCService {
             self.state
                 .lock()
                 .await
-                .device_activated(device_id.as_ref().unwrap());
+                .activate_device(device_id.as_ref().unwrap())
+                .await
+                .unwrap();
         }
 
         Ok(Response::new(msg::Resp {
@@ -320,7 +329,7 @@ impl Mpc for MPCService {
         let state = self.state.clone();
         tokio::task::spawn(async move {
             let mut state = state.lock().await;
-            state.device_activated(&device_id);
+            state.activate_device(&device_id).await.unwrap();
             state.decide_task(&task_id, &device_id, accept);
         });
 
@@ -350,7 +359,7 @@ impl Mpc for MPCService {
         );
 
         let mut state = self.state.lock().await;
-        state.device_activated(&device_id);
+        state.activate_device(&device_id).await.unwrap();
         state.acknowledge_task(&Uuid::from_slice(&task_id).unwrap(), &device_id);
 
         Ok(Response::new(msg::Resp {

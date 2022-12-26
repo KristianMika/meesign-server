@@ -1,7 +1,7 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
-#[derive(Debug)]
+#[derive(Queryable, Debug)]
 pub struct Device {
     identifier: Vec<u8>,
     name: String,
@@ -42,16 +42,16 @@ impl Device {
         self.last_active.load(Ordering::Relaxed)
     }
 
-    pub fn activated(&self) -> u64 {
-        self.last_active.store(
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_secs(),
-            Ordering::Relaxed,
-        );
-        self.last_active.load(Ordering::Relaxed)
-    }
+    // pub fn activated(&self) -> u64 {
+    //     self.last_active.store(
+    //         SystemTime::now()
+    //             .duration_since(UNIX_EPOCH)
+    //             .unwrap()
+    //             .as_secs(),
+    //         Ordering::Relaxed,
+    //     );
+    //     self.last_active.load(Ordering::Relaxed)
+    // }
 }
 
 impl From<&Device> for crate::proto::Device {
@@ -105,8 +105,8 @@ mod tests {
         assert_eq!(device.name(), &name);
         assert_eq!(device.certificate(), &certificate);
         let previous_active = device.last_active();
-        let activated = device.activated();
+        // let activated = device.activated();
         assert!(previous_active <= device.last_active());
-        assert_eq!(device.last_active(), activated);
+        // assert_eq!(device.last_active(), activated);
     }
 }

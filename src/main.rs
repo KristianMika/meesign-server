@@ -1,6 +1,7 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use clap::Parser;
+use dotenvy::dotenv;
 use lazy_static::lazy_static;
 use openssl::pkey::{PKey, Private};
 use openssl::x509::X509;
@@ -10,6 +11,7 @@ use tokio::{sync::Mutex, try_join};
 use tonic::codegen::Arc;
 
 mod communicator;
+mod db;
 mod device;
 mod group;
 mod interfaces;
@@ -21,6 +23,9 @@ mod proto {
     #![allow(clippy::derive_partial_eq_without_eq)]
     tonic::include_proto!("meesign");
 }
+
+#[macro_use]
+extern crate diesel;
 
 lazy_static! {
     static ref CA_CERT: X509 =
@@ -58,6 +63,7 @@ pub fn get_timestamp() -> u64 {
 #[tokio::main]
 async fn main() -> Result<(), String> {
     env_logger::init();
+    dotenv().ok();
     let args = Args::parse();
 
     #[cfg(feature = "cli")]
