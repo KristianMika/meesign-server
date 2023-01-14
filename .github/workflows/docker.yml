@@ -54,12 +54,6 @@ jobs:
         run: |
           echo "::set-output name=version_tag_arch::${{ inputs.dockerhub_username }}/${{ inputs.project_name}}:${{ steps.tagName.outputs.tag }}-${{ matrix.arch }}"
           echo "::set-output name=version_tag::${{ inputs.dockerhub_username }}/${{ inputs.project_name}}:${{ steps.tagName.outputs.tag }}"
-      - name: Download goenvtemplator
-        run: |
-          wget https://github.com/seznam/goenvtemplator/releases/download/v2.1.0/goenvtemplator2-amd64 -O /usr/local/bin/goenvtemplator2
-          chmod +x /usr/local/bin/goenvtemplator2
-      - name: Instantiate dockerfile template
-        run: goenvtemplator2 -env-file docker/${{ matrix.arch }}.conf -template ./docker/Dockerfile.in:./Dockerfile && cat ./Dockerfile
       - name: Build and Push
         uses: docker/build-push-action@v2
         with:
@@ -75,6 +69,7 @@ jobs:
             BUILD_VERSION=${{ steps.tagName.outputs.tag }}
             REVISION=${{ steps.vars.outputs.commit_hash }}
           platforms: linux/${{ matrix.arch }}
+          file: ./docker/Dockerfile_${{ matrix.arch }}
 
   merge-images:
     # Merges images tagged with architecture into a generic tag,
