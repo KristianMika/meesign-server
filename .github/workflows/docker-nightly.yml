@@ -12,6 +12,6 @@ jobs:
     uses: ./.github/workflows/docker.yml
     secrets: inherit
     with:
-      dockerhub_username: crocsmuni
+      dockerhub_username: kristianmika
       project_name: meesign
-      docker_tag: crocs-muni/meesign:nightly
+      docker_tag: kristianmika/meesign:nightly

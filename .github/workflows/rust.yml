@@ -30,14 +30,14 @@ jobs:
   build-n-release-docker-main:
     needs: build
     name: Docker main
-    if: github.ref == 'refs/heads/main' && github.repository_owner == 'crocs-muni'
+    # if: github.ref == 'refs/heads/main' && github.repository_owner == 'crocs-muni'
     uses: ./.github/workflows/docker.yml
     secrets: inherit
     with:
-      dockerhub_username: crocsmuni
+      dockerhub_username: kristianmika
       project_name: meesign
       docker_tag:
-        crocsmuni/meesign:main
+        kristianmika/meesign:main
 
   build-n-release-docker-stable:
     needs: build
@@ -47,7 +47,7 @@ jobs:
     uses: ./.github/workflows/docker.yml
     secrets: inherit
     with:
-      dockerhub_username: crocsmuni
+      dockerhub_username: kristianmika
       project_name: meesign
       docker_tag:
-        crocsmuni/meesign:latest
+        kristianmika/meesign:latest
