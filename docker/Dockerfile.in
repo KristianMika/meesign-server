@@ -6,10 +6,7 @@
 # Build meesign helper
 FROM maven:3-jdk-11 as java-builder
 WORKDIR /
-# TODO: use the original one
-# + TODO: DOCS
-# RUN git clone https://github.com/dufkan/meesign-helper.git meesign-helper
-RUN git clone https://github.com/KristianMika/meesign-helper.git meesign-helper
+RUN git clone https://github.com/dufkan/meesign-helper.git meesign-helper
 RUN cd meesign-helper && mvn clean compile assembly:single
 
 
@@ -17,14 +14,25 @@ RUN cd meesign-helper && mvn clean compile assembly:single
 FROM {{ required "RUST_BUILDER_IMAGE must be set!" (env "RUST_BUILDER_IMAGE") }} as rust-builder
 WORKDIR /home/rust/src/
 ADD --chown=rust:rust . .
+# Install protobuf compiler
+ENV PATH="${PATH}:/home/rust/.local/bin"
+RUN curl -LO "https://github.com/protocolbuffers/protobuf/releases/download/v21.9/protoc-21.9-linux-x86_64.zip" && \
+      unzip ./protoc-21.9-linux-x86_64.zip -d $HOME/.local && \
+      rm -rf ./protoc-21.9-linux-x86_64.zip && \
+      protoc --version
 RUN cargo build --release --target {{ required "TARGET must be set!" (env "TARGET") }}
 
 
-# Use a clean container to run the binary 
+# Use a clean container to run the binary
 # note it must be a JRE image for meesign helper
-FROM eclipse-temurin:11-jre-jammy as runner
-COPY --from=rust-builder /home/rust/src/target/{{ required "TARGET must be set!" (env "TARGET") }}/release/meesign-server /usr/local/bin/meesign-server
-COPY --from=java-builder /meesign-helper/target/signPDF-1.0-SNAPSHOT-jar-with-dependencies.jar /meesign/MeeSignHelper.jar
+FROM eclipse-temurin:11-jre-alpine as runner
+
+# Set specific UID and GID so the meesign user is compatible with the owner UID of the mapped key volume
+RUN addgroup -S meesign -g 1000 && adduser -u 1000 -S meesign -G meesign
+USER meesign
+
+COPY --chown=meesign:meesign --from=rust-builder /home/rust/src/target/{{ required "TARGET must be set!" (env "TARGET") }}/release/meesign-server /usr/local/bin/meesign-server
+COPY --chown=meesign:meesign --from=java-builder /meesign-helper/target/signPDF-1.0-SNAPSHOT-jar-with-dependencies.jar /meesign/MeeSignHelper.jar
 
 ARG SERVER_PORT=1337
 ARG BUILD_DATE
@@ -39,10 +47,11 @@ LABEL org.opencontainers.image.created=${BUILD_DATE} \
       org.opencontainers.image.title="meesign-server" \
       org.opencontainers.image.description="Meesign server for threshold ECDSA signatures." \
       org.opencontainers.image.vendor="CRoCS, FI MUNI" \
-      org.label-schema.docker.cmd="docker run --detach --publish 1337:1337 --volume `pwd`/keys/:/meesign/keys/ crocs-muni/meesign:latest"
+      org.label-schema.docker.cmd="docker run --detach --publish 1337:1337 --volume `pwd`/keys/:/meesign/keys/ crocsmuni/meesign:latest"
+
 
 EXPOSE ${SERVER_PORT}
-# running the binary from a specific directory as meesign helper requires 
+# running the binary from a specific directory as meesign helper requires
 # a certificate and a private key in ./keys/
 WORKDIR /meesign
 ENTRYPOINT ["meesign-server"]

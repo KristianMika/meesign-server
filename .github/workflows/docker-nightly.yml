@@ -1,9 +1,9 @@
 name: Nightly release
 
-on: [push]
-  # schedule:
-  #   # every midnight
-  #   - cron: '0 0 * * *'
+on:
+  schedule:
+    # every midnight
+    - cron: '0 0 * * *'
 jobs:
   build-n-release-docker-nightly:
     name: Docker nightly
@@ -14,4 +14,4 @@ jobs:
     with:
       dockerhub_username: crocsmuni
       project_name: meesign
-      docker_tags: crocs-muni/meesign:nightly
+      docker_tag: crocs-muni/meesign:nightly

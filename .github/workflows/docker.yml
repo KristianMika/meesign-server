@@ -24,7 +24,7 @@ jobs:
     # This job builds and pushes docker images into dockerhub. Created images are tagged in format: supplied-tag, supplied-tag-${arch}
     strategy:
       matrix:
-        arch: [aarch64, amd64] 
+        arch: [aarch64, amd64]
     runs-on: ubuntu-latest
     name: Docker build & release
     steps:
@@ -48,7 +48,7 @@ jobs:
           echo "::set-output name=commit_hash::$(git rev-parse HEAD)"
           echo "::set-output name=curr_date::$(date --rfc-3339=seconds)"
       - name: Set the version tags
-        # If the workflow contains a tag, set version docker tags in format "user/project:tag" and "user/project:tag-arch" 
+        # If the workflow contains a tag, set version docker tags in format "user/project:tag" and "user/project:tag-arch"
         id: version_tag
         if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
         run: |
@@ -100,11 +100,11 @@ jobs:
         id: version_amends
         if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
         run: echo "::set-output name=version_amends::$(echo '--amend ${{ steps.version_tag.outputs.version_tag }}'-{aarch64,amd64})"
-      - name: Merge untagged releases 
+      - name: Merge untagged releases
         run: |
           docker manifest create ${{ inputs.docker_tag }} $(echo "--amend ${{ inputs.docker_tag }}"-{aarch64,amd64}) ${{ steps.version_amends.outputs.version_amends }}
           docker manifest push ${{ inputs.docker_tag }}
-      - name: Merge tagged releases 
+      - name: Merge tagged releases
         if: github.event_name == 'push' && contains(github.ref, 'refs/tags/')
         run: |
           docker manifest create  ${{ steps.version_tag.outputs.version_tag }} $(echo "--amend ${{ steps.version_tag.outputs.version_tag }}"-{aarch64,amd64}) $(echo "--amend ${{ inputs.docker_tag }}"-{aarch64,amd64}) 
