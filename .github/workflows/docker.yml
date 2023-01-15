@@ -55,7 +55,7 @@ jobs:
           echo "::set-output name=version_tag_arch::${{ inputs.dockerhub_username }}/${{ inputs.project_name}}:${{ steps.tagName.outputs.tag }}-${{ matrix.arch }}"
           echo "::set-output name=version_tag::${{ inputs.dockerhub_username }}/${{ inputs.project_name}}:${{ steps.tagName.outputs.tag }}"
       - name: Build and Push
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v3
         with:
           push: true
           tags: |

@@ -8,10 +8,13 @@ RUN cd meesign-helper && mvn clean compile assembly:single
 # Build and statically link the meesign binary
 FROM messense/rust-musl-cross:aarch64-musl as rust-builder
 # Install protobuf compiler
+RUN echo "${PATH}"
 ENV PATH="${PATH}:/usr/local/bin"
-RUN curl -LO "https://github.com/protocolbuffers/protobuf/releases/download/v21.9/protoc-21.9-linux-x86_64.zip" && \
-    unzip ./protoc-21.9-linux-x86_64.zip -d /usr/local && \
-    rm -rf ./protoc-21.9-linux-x86_64.zip && \
+RUN echo "${PATH}"
+RUN curl -LO "https://github.com/protocolbuffers/protobuf/releases/download/v21.12/protoc-21.12-linux-aarch_64.zip" && \
+    unzip ./protoc-21.12-linux-aarch_64.zip -d /usr/local && \
+    rm -rf ./protoc-21.12-linux-aarch_64.zip && \
+    /usr/local/bin/protoc && \
     protoc --version
 
 WORKDIR /home/builder/src
