@@ -21,20 +21,21 @@ RUN curl -OL https://github.com/protocolbuffers/protobuf/releases/download/v21.9
     rm -f $PROTOC_ZIP && \
     protoc --version
 
-WORKDIR /home/builder/src
+
+WORKDIR /home/rust/src
 ADD . .
 RUN cargo build --release --target aarch64-unknown-linux-musl
 
 
 # Use a clean container to run the binary 
 # note it must be a JRE image for meesign helper
-FROM eclipse-temurin:11-jre-jammy as runner
+FROM arm64v8/eclipse-temurin:11-jre-jammy as runner
 
 # Set specific UID and GID so the meesign user is compatible with the owner UID of the mapped key volume
 RUN addgroup --system meesign --gid 1000 && adduser --uid 1000 --system meesign --ingroup meesign
 USER meesign
 
-COPY --chown=meesign:meesign --from=rust-builder /home/rust/src/target/x86_64-unknown-linux-musl/release/meesign-server /usr/local/bin/meesign-server
+COPY --chown=meesign:meesign --from=rust-builder /home/rust/src/target/aarch64-unknown-linux-musl/release/meesign-server /usr/local/bin/meesign-server
 COPY --chown=meesign:meesign --from=java-builder /meesign-helper/target/signPDF-1.0-SNAPSHOT-jar-with-dependencies.jar /meesign/MeeSignHelper.jar
 
 ARG SERVER_PORT=1337
