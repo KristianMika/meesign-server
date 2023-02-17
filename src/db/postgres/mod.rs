@@ -5,6 +5,7 @@ use diesel::prelude::*;
 use diesel::r2d2::{ConnectionManager, Pool, PoolError, PooledConnection};
 use error_stack::{IntoReport, Result};
 use error_stack::{Report, ResultExt};
+use log::warn;
 use std::env;
 use std::sync::Arc;
 
@@ -17,21 +18,6 @@ pub struct PostgresMeesignRepo {
 }
 
 pub type PgPool = Pool<ConnectionManager<PgConnection>>;
-
-pub fn establish_connection() -> PgConnection {
-    let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
-    PgConnection::establish(&database_url).expect(&format!("Error connecting to {}", database_url))
-}
-
-fn to_vec(bytes: &[u8; 16]) -> Vec<u8> {
-    let mut out = Vec::new();
-
-    bytes.iter().for_each(|b| {
-        out.push(b.clone());
-    });
-
-    out
-}
 
 impl PostgresMeesignRepo {
     pub fn new() -> Result<Self, PoolError> {
