@@ -4,9 +4,9 @@ use error_stack::ResultExt;
 use log::{error, warn};
 use uuid::Uuid;
 
+use crate::db::models::Device;
 use crate::db::postgres::PostgresMeesignRepo;
 use crate::db::{DbAccessError, MeesignRepo};
-use crate::device::Device;
 use crate::group::Group;
 use crate::interfaces::grpc::format_task;
 use crate::proto::{KeyType, ProtocolType};
@@ -20,7 +20,7 @@ use tonic::codegen::Arc;
 use tonic::Status;
 
 pub struct State {
-    devices: HashMap<Vec<u8>, Arc<Device>>,
+    devices: HashMap<Vec<u8>, Arc<crate::device::Device>>,
     groups: HashMap<Vec<u8>, Group>,
     tasks: HashMap<Uuid, Box<dyn Task + Send + Sync>>,
     subscribers: HashMap<Vec<u8>, Sender<Result<crate::proto::Task, Status>>>,
@@ -225,8 +225,11 @@ impl State {
         task.acknowledge(device);
     }
 
-    pub fn get_devices(&self) -> &HashMap<Vec<u8>, Arc<Device>> {
-        &self.devices
+    pub async fn get_devices(&self) -> error_stack::Result<Vec<Device>, DbAccessError> {
+        self.meesign_repo
+            .get_devices()
+            .await
+            .attach_printable("Coudln't read devices")
     }
 
     pub async fn activate_device(

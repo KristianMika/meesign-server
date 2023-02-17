@@ -14,6 +14,7 @@ use tonic::transport::{Certificate, ClientTlsAuth, Identity, Server, ServerTlsCo
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
 
+use crate::db::models::Device;
 use crate::db::MeesignRepo;
 use crate::proto::mpc_server::{Mpc, MpcServer};
 use crate::proto::{KeyType, ProtocolType};
@@ -270,8 +271,10 @@ impl Mpc for MPCService {
                 .lock()
                 .await
                 .get_devices()
-                .values()
-                .map(|device| device.as_ref().into())
+                .await
+                .unwrap() // todo remove unwrap
+                .into_iter()
+                .map(|device: Device| (&device).into())
                 .collect(),
         };
         Ok(Response::new(resp))

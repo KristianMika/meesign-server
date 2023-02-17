@@ -3,7 +3,7 @@
 
 [print_schema]
 file = "src/db/postgres/schema.rs"
-import_types = ["diesel::sql_types::*", "crate::db::enums::*"]
+import_types = ["diesel::sql_types::*"]
 
 [migrations_directory]
 dir = "migrations"

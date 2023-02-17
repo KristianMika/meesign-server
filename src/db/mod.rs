@@ -3,10 +3,10 @@ use std::{
     fmt::{self, Display},
 };
 
-use crate::{device::Device, group::Group};
+use crate::group::Group;
 use error_stack::Result;
 
-use self::enums::ProtocolType;
+use self::{enums::ProtocolType, models::Device};
 
 pub mod enums;
 pub mod models;
@@ -23,6 +23,7 @@ pub trait MeesignRepo {
     ) -> Result<(), DbAccessError>;
 
     async fn activate_device(&self, identifier: &Vec<u8>) -> Result<(), DbAccessError>;
+    async fn get_devices(&self) -> Result<Vec<Device>, DbAccessError>;
     // async fn activate_device<'a>(
     //     &self,
     //     identifier: &'a Vec<u8>,

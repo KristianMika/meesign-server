@@ -1,27 +1,30 @@
 use diesel_derive_enum::DbEnum;
 
 #[derive(Copy, Clone, PartialEq, Eq, Debug, DbEnum)]
-#[DieselType = "Protocoltype"]
+#[ExistingTypePath = "crate::db::postgres::schema::sql_types::Protocoltype"]
 pub enum ProtocolType {
     GG18,
 }
 
 #[derive(Debug, DbEnum)]
-#[DieselType = "TaskType"]
+#[ExistingTypePath = "crate::db::postgres::schema::sql_types::Tasktype"]
+
 pub enum Tasktype {
     Group,
     Sign,
 }
 
 #[derive(Debug, DbEnum)]
-#[DieselType = "Taskresulttype"]
+#[ExistingTypePath = "crate::db::postgres::schema::sql_types::Taskresulttype"]
+
 pub enum TaskResultType {
     GroupEstablished,
     Signed,
 }
 
 #[derive(Debug, DbEnum)]
-#[DieselType = "Taskstate"]
+#[ExistingTypePath = "crate::db::postgres::schema::sql_types::Taskstate"]
+
 pub enum TaskState {
     Created,
     Running,

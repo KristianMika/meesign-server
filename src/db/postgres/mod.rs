@@ -1,6 +1,5 @@
 use crate::db::models::NewDevice;
-use crate::device::{self, Device};
-use chrono::{NaiveDateTime, Utc};
+use chrono::Utc;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use diesel::r2d2::{ConnectionManager, Pool, PoolError, PooledConnection};
@@ -8,8 +7,8 @@ use error_stack::{IntoReport, Result};
 use error_stack::{Report, ResultExt};
 use std::env;
 use std::sync::Arc;
-use tonic::IntoRequest;
 
+use super::models::Device;
 use super::{DbAccessError, MeesignRepo};
 pub mod schema;
 
@@ -85,7 +84,7 @@ impl MeesignRepo for PostgresMeesignRepo {
 
         diesel::insert_into(device::table)
             .values(new_device)
-            .execute(&self.get_connection()?)
+            .execute(&mut self.get_connection()?)
             .into_report()
             .change_context(DbAccessError)?;
         Ok(())
@@ -96,7 +95,7 @@ impl MeesignRepo for PostgresMeesignRepo {
         let rows_affected = diesel::update(device)
             .filter(identifier.eq(target_identifier))
             .set(last_active.eq(Utc::now().naive_utc()))
-            .execute(&self.get_connection()?)
+            .execute(&mut self.get_connection()?)
             .into_report()
             .change_context(DbAccessError)?;
 
@@ -107,5 +106,13 @@ impl MeesignRepo for PostgresMeesignRepo {
             ));
         }
         Ok(())
+    }
+
+    async fn get_devices(&self) -> Result<Vec<Device>, DbAccessError> {
+        use crate::db::postgres::schema::device;
+        Ok(device::table
+            .load(&mut self.get_connection()?)
+            .into_report()
+            .change_context(DbAccessError)?)
     }
 }
