@@ -5,10 +5,7 @@ use std::{
 
 use error_stack::Result;
 
-use self::{
-    enums::ProtocolType,
-    models::{Device, Group},
-};
+use self::models::{Device, Group};
 
 pub mod enums;
 pub mod models;
@@ -51,17 +48,17 @@ impl Display for DbAccessError {
 
 impl Error for DbAccessError {}
 
-#[derive(Debug)]
-enum DbError {
-    InvalidInput(String),
-    DbError,
-    Other,
-}
+// #[derive(Debug)]
+// enum DbError {
+//     InvalidInput(String),
+//     DbError,
+//     Other,
+// }
 
-impl Display for DbError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("DbError: Coudln't not interract with the db.")
-    }
-}
+// impl Display for DbError {
+//     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+//         f.write_str("DbError: Coudln't not interract with the db.")
+//     }
+// }
 
-impl Error for DbError {}
+// impl Error for DbError {}

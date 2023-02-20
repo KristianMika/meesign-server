@@ -1,20 +1,20 @@
+use super::models::{Device, Group};
+use super::{DbAccessError, MeesignRepo};
 use crate::db::models::NewDevice;
 use chrono::Utc;
 use diesel::pg::PgConnection;
 use diesel::prelude::*;
 use diesel::r2d2::{ConnectionManager, Pool, PoolError, PooledConnection};
+use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use error_stack::{IntoReport, Result};
 use error_stack::{Report, ResultExt};
-use log::warn;
-use std::env;
 use std::sync::Arc;
 
-use super::models::{Device, Group};
-use super::{DbAccessError, MeesignRepo};
 pub mod schema;
-
 #[cfg(test)]
 mod tests;
+
+const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
 
 pub struct PostgresMeesignRepo {
     pg_pool: Arc<PgPool>,
@@ -23,12 +23,25 @@ pub struct PostgresMeesignRepo {
 pub type PgPool = Pool<ConnectionManager<PgConnection>>;
 
 impl PostgresMeesignRepo {
-    pub fn new(database_url: &str) -> Result<Self, PoolError> {
-        Ok(Self {
-            pg_pool: Arc::new(PostgresMeesignRepo::init_pool(database_url)?),
-        })
+    pub fn from_url(database_url: &str) -> Result<Self, DbAccessError> {
+        let repo = Self {
+            pg_pool: Arc::new(
+                PostgresMeesignRepo::init_pool(database_url)
+                    .change_context(DbAccessError)
+                    .attach_printable("Coudln't initalize pg pool")?,
+            ),
+        };
+        repo.apply_migrations()?;
+        Ok(repo)
     }
 
+    pub fn apply_migrations(&self) -> Result<(), DbAccessError> {
+        let mut conn = self.get_connection()?;
+        // TODO: return an error instead of panicking
+        conn.run_pending_migrations(MIGRATIONS)
+            .expect("Couldn't apply migrations");
+        Ok(())
+    }
     fn init_pool(database_url: &str) -> Result<PgPool, PoolError> {
         let manager = ConnectionManager::<PgConnection>::new(database_url);
         Pool::builder().build(manager).into_report()

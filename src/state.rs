@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::env;
 
 use error_stack::ResultExt;
-use log::{error, warn};
+use log::warn;
 use uuid::Uuid;
 
 use crate::db::models::Device;
@@ -34,13 +34,12 @@ impl State {
     pub fn new() -> Self {
         let database_url =
             env::var(DATABASE_URL_ENV).expect(&format!("{} must be set", DATABASE_URL_ENV));
-
         State {
             devices: HashMap::new(),
             groups: HashMap::new(),
             tasks: HashMap::new(),
             subscribers: HashMap::new(),
-            meesign_repo: PostgresMeesignRepo::new(&database_url).unwrap(),
+            meesign_repo: PostgresMeesignRepo::from_url(&database_url).unwrap(),
         }
     }
 

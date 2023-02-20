@@ -1,13 +1,10 @@
 use crate::db::DbAccessError;
 use diesel::{sql_types::Text, Connection, PgConnection, RunQueryDsl};
-use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use dotenvy::dotenv;
 use error_stack::{IntoReport, ResultExt};
 use log::debug;
 use std::env;
 use uuid::Uuid;
-
-pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
 
 /// Creates a new DB per test context and drops it at the end of the object's scope
 /// Separate tests are then independent of each other
@@ -34,18 +31,12 @@ pub struct TestDbContext {
 
 // TODO: consider writing a macro that would create the test context for us
 impl TestDbContext {
-    /// Creates a new test context
-    /// 1. creates a new ephmeral DB
-    /// 2. applies migrations
     pub fn new() -> error_stack::Result<Self, DbAccessError> {
         dotenv().ok();
 
         let base_url = env::var("DB_BASE_URL").expect("DB_BASE_URL must be set");
         let db_name = Self::generate_db_name();
         Self::create_test_db(&base_url, &db_name)?;
-        let mut conn = Self::connect_to_db(&base_url, &db_name)?;
-        conn.run_pending_migrations(MIGRATIONS)
-            .expect("Couldn't apply migrations");
 
         Ok(Self {
             base_url: base_url.into(),

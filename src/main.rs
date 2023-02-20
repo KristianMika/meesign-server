@@ -1,12 +1,11 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use crate::state::State;
 use clap::Parser;
 use dotenvy::dotenv;
 use lazy_static::lazy_static;
 use openssl::pkey::{PKey, Private};
 use openssl::x509::X509;
-
-use crate::state::State;
 use tokio::{sync::Mutex, try_join};
 use tonic::codegen::Arc;
 
@@ -63,13 +62,13 @@ pub fn get_timestamp() -> u64 {
 #[tokio::main]
 async fn main() -> Result<(), String> {
     env_logger::init();
-    dotenv().ok();
     let args = Args::parse();
 
     #[cfg(feature = "cli")]
     if args.command.is_some() {
         return cli::handle_command(args).await;
     }
+    dotenv().ok();
 
     let state = Arc::new(Mutex::new(State::new()));
 

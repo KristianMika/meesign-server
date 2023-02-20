@@ -8,7 +8,7 @@ use crate::db::{DbAccessError, MeesignRepo};
 async fn test_insert_device() -> error_stack::Result<(), DbAccessError> {
     let _ctx = TestDbContext::new()?;
 
-    let repo = PostgresMeesignRepo::new(&_ctx.ephemeral_db_url()).unwrap();
+    let repo = PostgresMeesignRepo::from_url(&_ctx.ephemeral_db_url()).unwrap();
     let identifier = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
     let name = "Test User 123";
     let certificate = vec![10, 9, 8, 7, 6, 5, 4, 3, 2, 1];
@@ -27,7 +27,7 @@ async fn test_insert_device() -> error_stack::Result<(), DbAccessError> {
 #[tokio::test]
 async fn test_identifier_unique_constraint() -> error_stack::Result<(), DbAccessError> {
     let _ctx = TestDbContext::new()?;
-    let repo = PostgresMeesignRepo::new(&_ctx.ephemeral_db_url()).unwrap();
+    let repo = PostgresMeesignRepo::from_url(&_ctx.ephemeral_db_url()).unwrap();
     let identifier = vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
     let first_device_name = "user1";
     repo.add_device(&identifier, first_device_name, &vec![1, 2, 3])

@@ -1,6 +1,6 @@
 @startuml meesign-erd
 
-skinparam linetype ortho
+'skinparam linetype ortho
 
 entity "Device" as device {
     * id: integer <<generated>>
@@ -16,7 +16,7 @@ entity "Subscriber" as subscriber {
     --
     device_id: bigint
 }
-entity "Group Participant" as group_pariticipant {
+entity "Group Participant" as group_participant {
     * id: integer <<generated>>
     --
     device_id: bytea
@@ -48,6 +48,22 @@ entity "Task" as task {
     --
     round: integer
     error_message: varchar
+    threshold: integer
+}
+
+entity "TaskParticipant" as task_participant{
+    * id: integer <<generated>>
+    --
+    is_active: boolean
+    decision: boolean
+    acknowledgement: boolean
+    outgoing_message: bytea
+}
+
+entity "IncomingMessage" as incoming_message {
+    * id: integer <<generated>>
+    --
+    content: bytea
 }
 
 enum "TaskType" as task_type {
@@ -74,15 +90,17 @@ enum "TaskResultType" as task_result_type {
     Signed
 }
 
-group ||..o{ group_pariticipant: < participates in
+group ||..o{ group_participant: < participates in
 group }o..|| key_type: is using >
-group_pariticipant }o..|| device: < is a participant
+group_participant }o..|| device: < is a participant
 group }o..|| protocol_type: > is of type
 task }o..|| task_type: > is of type
 group ||..o{ task: > contains
 task }o..|| stask_state: > is in state
 task_result }o..o| group : > group established
 task_result }o..|| task_result_type: > is of type
-
-
+task ||..|{ task_participant
+group_participant ||..o{ task_participant
+task_participant ||..o{ incoming_message: > from
+incoming_message }o..|| task_participant : > to
 @enduml

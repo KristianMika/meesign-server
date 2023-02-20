@@ -15,7 +15,6 @@ use tonic::{Request, Response, Status};
 use uuid::Uuid;
 
 use crate::db::models::Device;
-use crate::db::MeesignRepo;
 use crate::proto::mpc_server::{Mpc, MpcServer};
 use crate::proto::{KeyType, ProtocolType};
 use crate::state::State;
