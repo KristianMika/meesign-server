@@ -2,6 +2,10 @@
 
 pub mod sql_types {
     #[derive(diesel::sql_types::SqlType)]
+    #[diesel(postgres_type(name = "keytype"))]
+    pub struct Keytype;
+
+    #[derive(diesel::sql_types::SqlType)]
     #[diesel(postgres_type(name = "protocoltype"))]
     pub struct Protocoltype;
 
@@ -43,6 +47,7 @@ diesel::table! {
 diesel::table! {
     use diesel::sql_types::*;
     use super::sql_types::Protocoltype;
+    use super::sql_types::Keytype;
 
     signinggroup (identifier) {
         identifier -> Bytea,
@@ -50,6 +55,7 @@ diesel::table! {
         threshold -> Int4,
         protocol -> Protocoltype,
         round -> Int4,
+        key_type -> Keytype,
         group_certificate -> Nullable<Bytea>,
     }
 }

@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::env;
 
 use error_stack::ResultExt;
 use log::{error, warn};
@@ -24,42 +25,35 @@ pub struct State {
     groups: HashMap<Vec<u8>, Group>,
     tasks: HashMap<Uuid, Box<dyn Task + Send + Sync>>,
     subscribers: HashMap<Vec<u8>, Sender<Result<crate::proto::Task, Status>>>,
-    pub meesign_repo: PostgresMeesignRepo,
+    meesign_repo: PostgresMeesignRepo,
 }
+
+const DATABASE_URL_ENV: &str = "DATABASE_URL";
 
 impl State {
     pub fn new() -> Self {
+        let database_url =
+            env::var(DATABASE_URL_ENV).expect(&format!("{} must be set", DATABASE_URL_ENV));
+
         State {
             devices: HashMap::new(),
             groups: HashMap::new(),
             tasks: HashMap::new(),
             subscribers: HashMap::new(),
-            meesign_repo: PostgresMeesignRepo::new().unwrap(),
+            meesign_repo: PostgresMeesignRepo::new(&database_url).unwrap(),
         }
     }
 
-    // pub fn add_device(&mut self, identifier: &[u8], name: &str, certificate: &[u8]) -> bool {
-    //     if name.chars().count() > 64
-    //         || name
-    //             .chars()
-    //             .any(|x| x.is_ascii_punctuation() || x.is_control())
-    //     {
-    //         warn!("Invalid Device name {}", name);
-    //         return false;
-    //     }
-
-    //     let device = Device::new(identifier.to_vec(), name.to_owned(), certificate.to_vec());
-    //     // TODO improve when feature map_try_insert gets stabilized
-    //     if self.devices.contains_key(identifier) {
-    //         warn!(
-    //             "Device identifier already registered {}",
-    //             hex::encode(identifier)
-    //         );
-    //         return false;
-    //     }
-    //     self.devices.insert(identifier.to_vec(), Arc::new(device));
-    //     true
-    // }
+    pub async fn add_device(
+        &mut self,
+        identifier: &[u8],
+        name: &str,
+        certificate: &[u8],
+    ) -> error_stack::Result<(), DbAccessError> {
+        self.meesign_repo
+            .add_device(&identifier.to_vec(), name, certificate)
+            .await
+    }
 
     pub fn add_group_task(
         &mut self,

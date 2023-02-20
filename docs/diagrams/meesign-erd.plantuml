@@ -11,6 +11,11 @@ entity "Device" as device {
     last_active: bigint
 }
 
+entity "Subscriber" as subscriber {
+    * id: integer <<generated>>
+    --
+    device_id: bigint
+}
 entity "Group Participant" as group_pariticipant {
     * id: integer <<generated>>
     --

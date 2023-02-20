@@ -31,3 +31,11 @@ pub enum TaskState {
     Finished,
     Failed,
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, DbEnum)]
+#[ExistingTypePath = "crate::db::postgres::schema::sql_types::Keytype"]
+
+pub enum KeyType {
+    SignPDF,
+    SignChallenge,
+}

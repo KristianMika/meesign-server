@@ -58,15 +58,11 @@ impl Mpc for MPCService {
         let csr = request.csr;
         info!("RegistrationRequest name={:?}", name);
 
-        let state = self.state.lock().await;
+        let mut state = self.state.lock().await;
 
         if let Ok(certificate) = issue_certificate(&name, &csr) {
             let device_id = cert_to_id(&certificate);
-            match state
-                .meesign_repo
-                .add_device(&device_id, &name, &certificate)
-                .await
-            {
+            match state.add_device(&device_id, &name, &certificate).await {
                 Ok(_) => Ok(Response::new(msg::RegistrationResponse {
                     device_id,
                     certificate,

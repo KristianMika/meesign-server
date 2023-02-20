@@ -3,10 +3,12 @@ use std::{
     fmt::{self, Display},
 };
 
-use crate::group::Group;
 use error_stack::Result;
 
-use self::{enums::ProtocolType, models::Device};
+use self::{
+    enums::ProtocolType,
+    models::{Device, Group},
+};
 
 pub mod enums;
 pub mod models;
@@ -17,19 +19,14 @@ pub trait MeesignRepo {
     /* Devices */
     async fn add_device(
         &self,
-        identifier: &Vec<u8>,
+        identifier: &[u8],
         name: &str,
-        certificate: &Vec<u8>,
+        certificate: &[u8],
     ) -> Result<(), DbAccessError>;
-
-    async fn activate_device(&self, identifier: &Vec<u8>) -> Result<(), DbAccessError>;
     async fn get_devices(&self) -> Result<Vec<Device>, DbAccessError>;
-    // async fn activate_device<'a>(
-    //     &self,
-    //     identifier: &'a Vec<u8>,
-    // ) -> error_stack::Result<(), DbAccessError>;
+    async fn activate_device(&self, identifier: &Vec<u8>) -> Result<(), DbAccessError>;
+
     // async fn get_device(&self, identifier: &Vec<u8>) -> Option<Device>;
-    // async fn get_devices(&self) -> error_stack::Result<Vec<Device>, DbAccessError>;
 
     // /* Groups */
     // async fn add_group<'a>(
@@ -40,6 +37,7 @@ pub trait MeesignRepo {
     //     protocol: ProtocolType,
     // ) -> Result<Group, ()>;
     // async fn get_group(&self, group_identifier: &Vec<u8>) -> Option<Group>;
+    async fn get_groups(&self) -> Result<Vec<Group>, DbAccessError>;
 }
 
 #[derive(Debug)]

@@ -9,9 +9,12 @@ use log::warn;
 use std::env;
 use std::sync::Arc;
 
-use super::models::Device;
+use super::models::{Device, Group};
 use super::{DbAccessError, MeesignRepo};
 pub mod schema;
+
+#[cfg(test)]
+mod tests;
 
 pub struct PostgresMeesignRepo {
     pg_pool: Arc<PgPool>,
@@ -20,14 +23,13 @@ pub struct PostgresMeesignRepo {
 pub type PgPool = Pool<ConnectionManager<PgConnection>>;
 
 impl PostgresMeesignRepo {
-    pub fn new() -> Result<Self, PoolError> {
+    pub fn new(database_url: &str) -> Result<Self, PoolError> {
         Ok(Self {
-            pg_pool: Arc::new(PostgresMeesignRepo::init_pool()?),
+            pg_pool: Arc::new(PostgresMeesignRepo::init_pool(database_url)?),
         })
     }
 
-    fn init_pool() -> Result<PgPool, PoolError> {
-        let database_url = env::var("DATABASE_URL").expect("DATABASE_URL must be set");
+    fn init_pool(database_url: &str) -> Result<PgPool, PoolError> {
         let manager = ConnectionManager::<PgConnection>::new(database_url);
         Pool::builder().build(manager).into_report()
     }
@@ -46,9 +48,9 @@ impl PostgresMeesignRepo {
 impl MeesignRepo for PostgresMeesignRepo {
     async fn add_device(
         &self,
-        identifier: &Vec<u8>,
+        identifier: &[u8],
         name: &str,
-        certificate: &Vec<u8>,
+        certificate: &[u8],
     ) -> Result<(), DbAccessError> {
         const MAX_NAME_LEN: usize = 64;
 
@@ -62,9 +64,9 @@ impl MeesignRepo for PostgresMeesignRepo {
         }
 
         let new_device = NewDevice {
-            identifier,
+            identifier: &identifier.to_vec(),
             device_name: name,
-            certificate,
+            certificate: &certificate.to_vec(),
         };
         use crate::db::postgres::schema::device;
 
@@ -97,6 +99,14 @@ impl MeesignRepo for PostgresMeesignRepo {
     async fn get_devices(&self) -> Result<Vec<Device>, DbAccessError> {
         use crate::db::postgres::schema::device;
         Ok(device::table
+            .load(&mut self.get_connection()?)
+            .into_report()
+            .change_context(DbAccessError)?)
+    }
+
+    async fn get_groups(&self) -> Result<Vec<Group>, DbAccessError> {
+        use crate::db::postgres::schema::signinggroup;
+        Ok(signinggroup::table
             .load(&mut self.get_connection()?)
             .into_report()
             .change_context(DbAccessError)?)

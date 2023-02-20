@@ -4,6 +4,8 @@ use diesel::{Insertable, Queryable};
 use crate::db::enums::ProtocolType;
 use crate::db::postgres::schema::*;
 
+use super::enums::KeyType;
+
 #[derive(Insertable)]
 #[diesel(table_name = device)]
 pub struct NewDevice<'a> {
@@ -40,6 +42,7 @@ pub struct Group {
     pub threshold: i32,
     pub protocol: ProtocolType,
     pub round: i32,
+    pub key_type: KeyType,
     pub group_certificate: Option<Vec<u8>>,
 }
 
