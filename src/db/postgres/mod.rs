@@ -28,7 +28,7 @@ impl PostgresMeesignRepo {
             pg_pool: Arc::new(
                 PostgresMeesignRepo::init_pool(database_url)
                     .change_context(DbAccessError)
-                    .attach_printable("Coudln't initalize pg pool")?,
+                    .attach_printable_lazy(|| "Coudln't initalize pg pool")?,
             ),
         };
         repo.apply_migrations()?;
@@ -73,7 +73,7 @@ impl MeesignRepo for PostgresMeesignRepo {
                 .any(|x| x.is_ascii_punctuation() || x.is_control())
         {
             return Err(Report::new(DbAccessError))
-                .attach_printable(format!("Invalid device name: {name}"));
+                .attach_printable_lazy(|| format!("Invalid device name: {name}"));
         }
 
         let new_device = NewDevice {
@@ -102,7 +102,7 @@ impl MeesignRepo for PostgresMeesignRepo {
 
         let expected_affect_rows_count = 1;
         if rows_affected != expected_affect_rows_count {
-            return Err(Report::new(DbAccessError)).attach_printable(format!(
+            return Err(Report::new(DbAccessError)).attach_printable_lazy(|| format!(
                 "Invalid number of affected rows: Expected {expected_affect_rows_count}, but got {rows_affected}."
             ));
         }

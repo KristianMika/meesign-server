@@ -43,12 +43,18 @@ enum "KeyType" as key_type {
 }
 
 
+
 entity "Task" as task {
     * id: integer <<generated>>
     --
     round: integer
+    attempts: integer
     error_message: varchar
     threshold: integer
+    last_update: bigint
+    data: bytea
+    preprocessed: bytea
+    request: bytea
 }
 
 entity "TaskParticipant" as task_participant{
@@ -82,7 +88,7 @@ enum "TaskState" as stask_state {
 entity "TaskResult" as task_result {
     * id: integer <<generated>>
     --
-    signed_data: bytea
+    data: bytea
 }
 
 enum "TaskResultType" as task_result_type {
@@ -97,7 +103,7 @@ group }o..|| protocol_type: > is of type
 task }o..|| task_type: > is of type
 group ||..o{ task: > contains
 task }o..|| stask_state: > is in state
-task_result }o..o| group : > group established
+' task_result }o..o| group : > group established
 task_result }o..|| task_result_type: > is of type
 task ||..|{ task_participant
 group_participant ||..o{ task_participant

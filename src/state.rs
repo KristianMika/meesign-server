@@ -1,10 +1,3 @@
-use std::collections::HashMap;
-use std::env;
-
-use error_stack::ResultExt;
-use log::warn;
-use uuid::Uuid;
-
 use crate::db::models::Device;
 use crate::db::postgres::PostgresMeesignRepo;
 use crate::db::{DbAccessError, MeesignRepo};
@@ -15,10 +8,15 @@ use crate::tasks::group::GroupTask;
 use crate::tasks::sign::SignTask;
 use crate::tasks::sign_pdf::SignPDFTask;
 use crate::tasks::{Task, TaskResult, TaskStatus};
+use error_stack::ResultExt;
 use log::info;
+use log::warn;
+use std::collections::HashMap;
+use std::env;
 use tokio::sync::mpsc::Sender;
 use tonic::codegen::Arc;
 use tonic::Status;
+use uuid::Uuid;
 
 pub struct State {
     devices: HashMap<Vec<u8>, Arc<crate::device::Device>>,
@@ -222,7 +220,7 @@ impl State {
         self.meesign_repo
             .get_devices()
             .await
-            .attach_printable("Coudln't read devices")
+            .attach_printable_lazy(|| "Coudln't read devices")
     }
 
     pub async fn activate_device(
@@ -232,10 +230,12 @@ impl State {
         self.meesign_repo
             .activate_device(&device_id.to_vec())
             .await
-            .attach_printable(format!(
-                "Coudln't activate device with ID {}",
-                hex::encode(device_id)
-            ))
+            .attach_printable_lazy(|| {
+                format!(
+                    "Coudln't activate device with ID {}",
+                    hex::encode(device_id)
+                )
+            })
     }
 
     pub fn restart_task(&mut self, task_id: &Uuid) -> bool {

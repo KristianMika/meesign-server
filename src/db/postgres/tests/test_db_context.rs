@@ -63,7 +63,7 @@ impl TestDbContext {
         PgConnection::establish(&db_url)
             .into_report()
             .change_context(DbAccessError)
-            .attach_printable(format!("Cannot connect to {} database.", &db_name))
+            .attach_printable_lazy(|| format!("Cannot connect to {} database.", &db_name))
     }
 
     /// Creates an ephemeral DB
