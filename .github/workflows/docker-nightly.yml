@@ -3,12 +3,13 @@ name: Nightly release
 on:
   schedule:
     # every midnight
-    - cron: '0 0 * * *'
+    # - cron: "0 0 * * *" TODO
+    - cron: "*/10 * * * *"
 jobs:
   build-n-release-docker-nightly:
     name: Docker nightly
     # Run only on the main repo, not forks
-    if: github.repository_owner == 'crocs-muni'
+    # if: github.repository_owner == 'crocs-muni'
     uses: ./.github/workflows/docker.yml
     secrets: inherit
     with:
@@ -16,3 +17,4 @@ jobs:
       project_name: meesign
       docker_tags: |
         crocsmuni/meesign:nightly
+      checkout_branch: devel
