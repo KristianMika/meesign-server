@@ -6,10 +6,6 @@ use uuid::Uuid;
 use crate::group::Group;
 use crate::interfaces::grpc::format_task;
 use crate::persistence::meesign_repo::MeesignRepo;
-use crate::proto::KeyType;
-use crate::tasks::decrypt::DecryptTask;
-use crate::tasks::sign::SignTask;
-use crate::tasks::sign_pdf::SignPDFTask;
 use crate::tasks::{Task, TaskResult, TaskStatus};
 use crate::utils;
 use tokio::sync::mpsc::Sender;
@@ -32,84 +28,6 @@ impl State {
             subscribers: HashMap::new(),
             repo,
         }
-    }
-
-
-    pub fn add_sign_task(&mut self, group_id: &[u8], name: &str, data: &[u8]) -> Option<Uuid> {
-        let group = self.groups.get(group_id);
-        if group.is_none() {
-            warn!(
-                "Signing requested from an unknown group group_id={}",
-                utils::hextrunc(group_id)
-            );
-            return None;
-        }
-        let group = group.unwrap();
-        let task = match group.key_type() {
-            KeyType::SignPdf => {
-                SignPDFTask::try_new(group.clone(), name.to_string(), data.to_vec())
-                    .ok()
-                    .map(|task| Box::new(task) as Box<dyn Task + Sync + Send>)
-            }
-            KeyType::SignChallenge => {
-                SignTask::try_new(group.clone(), name.to_string(), data.to_vec())
-                    .ok()
-                    .map(|task| Box::new(task) as Box<dyn Task + Sync + Send>)
-            }
-            KeyType::Decrypt => {
-                warn!(
-                    "Signing request made for decryption group group_id={}",
-                    utils::hextrunc(group_id)
-                );
-                return None;
-            }
-        };
-
-        let task_id = task.map(|task| self.add_task(task));
-        if let Some(task_id) = &task_id {
-            self.send_updates(task_id);
-        }
-        task_id
-    }
-
-    pub fn add_decrypt_task(
-        &mut self,
-        group_id: &[u8],
-        name: &str,
-        data: &[u8],
-        data_type: &str,
-    ) -> Option<Uuid> {
-        let group = self.groups.get(group_id);
-        if group.is_none() {
-            warn!(
-                "Decryption requested from an unknown group group_id={}",
-                utils::hextrunc(group_id)
-            );
-            return None;
-        }
-        let group = group.unwrap();
-        let task = match group.key_type() {
-            KeyType::Decrypt => Some(DecryptTask::new(
-                group.clone(),
-                name.to_string(),
-                data.to_vec(),
-                data_type.to_string(),
-            ))
-            .map(|task| Box::new(task) as Box<dyn Task + Sync + Send>),
-            KeyType::SignPdf | KeyType::SignChallenge => {
-                warn!(
-                    "Decryption request made for a signing group group_id={}",
-                    utils::hextrunc(group_id)
-                );
-                return None;
-            }
-        };
-
-        let task_id = task.map(|task| self.add_task(task));
-        if let Some(task_id) = &task_id {
-            self.send_updates(task_id);
-        }
-        task_id
     }
 
     fn add_task(&mut self, task: Box<dyn Task + Sync + Send>) -> Uuid {

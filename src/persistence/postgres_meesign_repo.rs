@@ -159,4 +159,12 @@ impl MeesignRepo for PostgresMeesignRepo {
         )
         .await
     }
+    async fn create_decrypt_task(
+        &self,
+        group_identifier: &Vec<u8>,
+        name: &str,
+        data: &Vec<u8>,
+    ) -> Result<Task, PersistenceError> {
+        todo!()
+    }
 }

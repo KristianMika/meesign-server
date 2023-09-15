@@ -46,4 +46,11 @@ pub trait MeesignRepo: Send + Sync {
         name: &str,
         data: &Vec<u8>,
     ) -> Result<Task, PersistenceError>;
+
+    async fn create_decrypt_task(
+        &self,
+        group_identifier: &Vec<u8>,
+        name: &str,
+        data: &Vec<u8>,
+    ) -> Result<Task, PersistenceError>;
 }
