@@ -13,8 +13,9 @@ pub async fn create_task(
     connection: &mut AsyncPgConnection,
     task_type: TaskType,
     name: &str,
+    data: Option<&Vec<u8>>,
     devices: &[Vec<u8>],
-    threshold: u32,
+    threshold: Option<u32>,
     key_type: Option<KeyType>,
     protocol_type: Option<ProtocolType>,
 ) -> Result<Task, PersistenceError> {
@@ -24,21 +25,21 @@ pub async fn create_task(
         )));
     }
 
-    let threshold: i32 = threshold.try_into()?;
-    let task = NewTask {
-        protocol_round: 0,
-        attempt_count: 0,
-        error_message: None,
-        threshold,
-        last_update: None,
-        task_data: None,
-        preprocessed: None,
-        request: None,
-        task_type,
-        key_type,
-        task_state: TaskState::Created,
-        protocol_type,
-    };
+    // let threshold = threshold.map(|threshold| threshold.try_into()?);
+    // let task = NewTask {
+    //     protocol_round: 0,
+    //     attempt_count: 0,
+    //     error_message: None,
+    //     threshold,
+    //     last_update: None,
+    //     task_data: data.as_ref(),
+    //     preprocessed: None,
+    //     request: None,
+    //     task_type,
+    //     key_type,
+    //     task_state: TaskState::Created,
+    //     protocol_type,
+    // };
 
     todo!()
 }

@@ -94,12 +94,12 @@ impl Mpc for MPCService {
         info!("SignRequest group_id={}", utils::hextrunc(&group_id));
 
         let mut state = self.state.lock().await;
-        if let Some(task_id) = state.add_sign_task(&group_id, &name, &data) {
-            let task = state.get_task(&task_id).unwrap();
-            Ok(Response::new(format_task(&task_id, task, None, None)))
-        } else {
-            Err(Status::failed_precondition("Request failed"))
-        }
+        let task = state
+            .get_repo()
+            .create_sign_task(&group_id, &name, &data)
+            .await?;
+        state.send_updates(&task.id);
+        Ok(Response::new(format_task(&task.id, task, None, None)))
     }
 
     async fn decrypt(
