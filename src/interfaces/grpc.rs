@@ -59,7 +59,7 @@ impl Mpc for MPCService {
         let csr = request.csr;
         info!("RegistrationRequest name={:?}", name);
 
-        let mut state = self.state.lock().await;
+        let state = self.state.lock().await;
 
         if let Ok(certificate) = issue_certificate(&name, &csr) {
             let identifier = cert_to_id(&certificate);
@@ -142,7 +142,7 @@ impl Mpc for MPCService {
 
         let state = self.state.lock().await;
         if device_id.is_some() {
-            state.get_repo().activate_device(device_id.unwrap());
+            state.get_repo().activate_device(device_id.unwrap()).await?;
         }
         let task = state.get_task(&task_id).unwrap();
         let request = Some(task.get_request());
@@ -175,7 +175,7 @@ impl Mpc for MPCService {
         );
 
         let mut state = self.state.lock().await;
-        state.get_repo().activate_device(&device_id);
+        state.get_repo().activate_device(&device_id).await?;
         let result = state.update_task(&task_id, &device_id, &data, attempt);
 
         match result {
@@ -200,7 +200,7 @@ impl Mpc for MPCService {
 
         let state = self.state.lock().await;
         let tasks = if let Some(device_id) = device_id {
-            state.get_repo().activate_device(&device_id);
+            state.get_repo().activate_device(&device_id).await?;
             state
                 .get_device_tasks(&device_id)
                 .iter()
@@ -231,7 +231,7 @@ impl Mpc for MPCService {
 
         let state = self.state.lock().await;
         let groups = if let Some(device_id) = device_id {
-            state.get_repo().activate_device(&device_id);
+            state.get_repo().activate_device(&device_id).await?;
             state
                 .get_device_groups(&device_id)
                 .iter()
@@ -329,7 +329,8 @@ impl Mpc for MPCService {
                 .lock()
                 .await
                 .get_repo()
-                .activate_device(device_id.as_ref().unwrap());
+                .activate_device(device_id.as_ref().unwrap())
+                .await?;
         }
 
         Ok(Response::new(msg::Resp {
@@ -363,7 +364,7 @@ impl Mpc for MPCService {
         let state = self.state.clone();
         tokio::task::spawn(async move {
             let mut state = state.lock().await;
-            state.get_repo().activate_device(&device_id);
+            state.get_repo().activate_device(&device_id).await;
             state.decide_task(&task_id, &device_id, accept);
         });
 
@@ -393,7 +394,7 @@ impl Mpc for MPCService {
         );
 
         let mut state = self.state.lock().await;
-        state.get_repo().activate_device(&device_id);
+        state.get_repo().activate_device(&device_id).await?;
         state.acknowledge_task(&Uuid::from_slice(&task_id).unwrap(), &device_id);
 
         Ok(Response::new(msg::Resp {
