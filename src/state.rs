@@ -3,7 +3,6 @@ use std::collections::HashMap;
 use log::{debug, error, warn};
 use uuid::Uuid;
 
-use crate::device::Device;
 use crate::group::Group;
 use crate::interfaces::grpc::format_task;
 use crate::persistence::meesign_repo::MeesignRepo;
@@ -19,7 +18,7 @@ use tonic::codegen::Arc;
 use tonic::Status;
 
 pub struct State {
-    devices: HashMap<Vec<u8>, Arc<Device>>,
+    // devices: HashMap<Vec<u8>, Arc<Device>>,
     groups: HashMap<Vec<u8>, Group>,
     tasks: HashMap<Uuid, Box<dyn Task + Send + Sync>>,
     subscribers: HashMap<Vec<u8>, Sender<Result<crate::proto::Task, Status>>>,
@@ -29,7 +28,6 @@ pub struct State {
 impl State {
     pub fn new(repo: Arc<dyn MeesignRepo>) -> Self {
         State {
-            devices: HashMap::new(),
             groups: HashMap::new(),
             tasks: HashMap::new(),
             subscribers: HashMap::new(),
@@ -37,28 +35,6 @@ impl State {
         }
     }
 
-    pub fn add_device(&mut self, identifier: &[u8], name: &str, certificate: &[u8]) -> bool {
-        if name.chars().count() > 64
-            || name
-                .chars()
-                .any(|x| x.is_ascii_punctuation() || x.is_control())
-        {
-            warn!("Invalid Device name {}", name);
-            return false;
-        }
-
-        let device = Device::new(identifier.to_vec(), name.to_owned(), certificate.to_vec());
-        // TODO improve when feature map_try_insert gets stabilized
-        if self.devices.contains_key(identifier) {
-            warn!(
-                "Device identifier already registered {}",
-                utils::hextrunc(identifier)
-            );
-            return false;
-        }
-        self.devices.insert(identifier.to_vec(), Arc::new(device));
-        true
-    }
 
     pub fn add_group_task(
         &mut self,
@@ -275,17 +251,6 @@ impl State {
         task.acknowledge(device);
     }
 
-    pub fn get_devices(&self) -> &HashMap<Vec<u8>, Arc<Device>> {
-        &self.devices
-    }
-
-    pub fn device_activated(&self, device_id: &[u8]) {
-        if let Some(device) = self.devices.get(device_id) {
-            device.activated();
-        } else {
-            error!("Unknown Device ID {}", utils::hextrunc(device_id));
-        }
-    }
 
     pub fn restart_task(&mut self, task_id: &Uuid) -> bool {
         if self
@@ -342,5 +307,9 @@ impl State {
         for device_id in remove {
             self.remove_subscriber(&device_id);
         }
+    }
+
+    pub fn get_repo(&self) -> &Arc<dyn MeesignRepo> {
+        &self.repo
     }
 }

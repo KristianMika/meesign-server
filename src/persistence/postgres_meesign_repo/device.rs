@@ -18,7 +18,7 @@ pub async fn get_devices(
 
 pub async fn activate_device(
     connection: &mut AsyncPgConnection,
-    target_identifier: &Vec<u8>,
+    target_identifier: &[u8],
 ) -> Result<Option<Device>, PersistenceError> {
     use crate::persistence::schema::device::dsl::*;
     let activated_device = diesel::update(device)
@@ -134,7 +134,7 @@ mod test {
             &vec![1, 2, 3],
         )
         .await?;
-        let Err(_) = add_device(& mut connection, &identifier, "user2", &vec![3, 2, 1]).await else {
+        let Err(_) = add_device(&mut connection, &identifier, "user2", &vec![3, 2, 1]).await else {
             panic!("DB shoudln't have allowed to insert 2 devices with the same identifier");
         };
 
