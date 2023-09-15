@@ -3,6 +3,7 @@ use diesel::{Insertable, Queryable, Selectable};
 use uuid::Uuid;
 
 use crate::persistence::schema::*;
+use crate::proto;
 
 use super::enums::{KeyType, ProtocolType, TaskState, TaskType};
 
@@ -24,9 +25,9 @@ pub struct Device {
     pub last_active: NaiveDateTime, // TODO: local date time
 }
 
-impl From<Device> for crate::proto::Device {
+impl From<Device> for proto::Device {
     fn from(device: Device) -> Self {
-        crate::proto::Device {
+        proto::Device {
             identifier: device.identifier,
             name: device.device_name,
             certificate: device.device_certificate,
@@ -48,10 +49,10 @@ pub struct Group {
     pub group_certificate: Option<Vec<u8>>,
 }
 
-impl From<Group> for crate::proto::Group {
+impl From<Group> for proto::Group {
     fn from(value: Group) -> Self {
-        let protocol: crate::proto::ProtocolType = value.protocol.into();
-        let key_type: crate::proto::KeyType = value.key_type.into();
+        let protocol: proto::ProtocolType = value.protocol.into();
+        let key_type: proto::KeyType = value.key_type.into();
         Self {
             identifier: value.identifier,
             name: value.group_name,
