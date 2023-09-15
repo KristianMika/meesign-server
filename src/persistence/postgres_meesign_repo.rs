@@ -171,4 +171,17 @@ impl MeesignRepo for PostgresMeesignRepo {
     ) -> Result<Task, PersistenceError> {
         todo!()
     }
+
+    async fn get_tasks(&self) -> Result<Vec<Task>, PersistenceError> {
+        todo!()
+    }
+
+    async fn get_tasks_for_restart(&self) -> Result<Vec<Task>, PersistenceError> {
+        todo!()
+        // if task.get_status() != TaskStatus::Finished
+        //     && task.is_approved()
+        //     && timestamp - task.last_update() > 30
+        // {
+        //     info!("Stale task detected task_id={:?}", hex::encode(task_id));
+    }
 }

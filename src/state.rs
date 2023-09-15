@@ -51,10 +51,6 @@ impl State {
         tasks
     }
 
-    pub fn get_tasks(&self) -> &HashMap<Uuid, Box<dyn Task + Send + Sync>> {
-        &self.tasks
-    }
-
     pub fn get_task(&self, task: &Uuid) -> Option<&dyn Task> {
         self.tasks.get(task).map(|task| task.as_ref() as &dyn Task)
     }

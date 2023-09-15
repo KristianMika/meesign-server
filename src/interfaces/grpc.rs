@@ -208,9 +208,11 @@ impl Mpc for MPCService {
                 .collect()
         } else {
             state
+                .get_repo()
                 .get_tasks()
-                .iter()
-                .map(|(task_id, task)| format_task(task_id, task.as_ref(), None, None))
+                .await?
+                .into_iter()
+                .map(|task| format_task(&task.id, task, None, None))
                 .collect()
         };
 
