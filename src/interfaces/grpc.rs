@@ -239,8 +239,10 @@ impl Mpc for MPCService {
                 .collect()
         } else {
             state
+                .get_repo()
                 .get_groups()
-                .values()
+                .await?
+                .into_iter()
                 .map(|group| group.into())
                 .collect()
         };

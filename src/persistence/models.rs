@@ -48,6 +48,21 @@ pub struct Group {
     pub group_certificate: Option<Vec<u8>>,
 }
 
+impl From<Group> for crate::proto::Group {
+    fn from(value: Group) -> Self {
+        let protocol: crate::proto::ProtocolType = value.protocol.into();
+        let key_type: crate::proto::KeyType = value.key_type.into();
+        Self {
+            identifier: value.identifier,
+            name: value.group_name,
+            threshold: value.threshold as u32,
+            protocol: protocol.into(),
+            key_type: key_type.into(),
+            device_ids: todo!(),
+        }
+    }
+}
+
 #[derive(Insertable)]
 #[diesel(table_name=signinggroup)]
 pub struct NewGroup<'a> {

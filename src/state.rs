@@ -61,10 +61,6 @@ impl State {
         groups
     }
 
-    pub fn get_groups(&self) -> &HashMap<Vec<u8>, Group> {
-        &self.groups
-    }
-
     pub fn get_tasks(&self) -> &HashMap<Uuid, Box<dyn Task + Send + Sync>> {
         &self.tasks
     }

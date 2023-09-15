@@ -19,6 +19,16 @@ impl From<proto::ProtocolType> for ProtocolType {
     }
 }
 
+impl From<ProtocolType> for proto::ProtocolType {
+    fn from(value: ProtocolType) -> Self {
+        match value {
+            ProtocolType::Gg18 => Self::Gg18,
+            ProtocolType::ElGamal => Self::Elgamal,
+            ProtocolType::Frost => Self::Frost,
+        }
+    }
+}
+
 #[derive(Debug, DbEnum, Clone, PartialEq, Eq)]
 #[ExistingTypePath = "crate::persistence::schema::sql_types::Tasktype"]
 
@@ -60,6 +70,16 @@ impl From<proto::KeyType> for KeyType {
             proto::KeyType::SignPdf => Self::SignPDF,
             proto::KeyType::SignChallenge => Self::SignChallenge,
             proto::KeyType::Decrypt => Self::Decrypt,
+        }
+    }
+}
+
+impl From<KeyType> for proto::KeyType {
+    fn from(value: KeyType) -> Self {
+        match value {
+            KeyType::SignPDF => proto::KeyType::SignPdf,
+            KeyType::SignChallenge => proto::KeyType::SignChallenge,
+            KeyType::Decrypt => proto::KeyType::Decrypt,
         }
     }
 }
