@@ -233,8 +233,10 @@ impl Mpc for MPCService {
         let groups = if let Some(device_id) = device_id {
             state.get_repo().activate_device(&device_id).await?;
             state
+                .get_repo()
                 .get_device_groups(&device_id)
-                .iter()
+                .await?
+                .into_iter()
                 .map(|group| group.into())
                 .collect()
         } else {

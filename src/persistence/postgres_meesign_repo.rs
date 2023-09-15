@@ -99,6 +99,10 @@ impl MeesignRepo for PostgresMeesignRepo {
         get_groups(&mut self.get_async_connection().await?).await
     }
 
+    async fn get_device_groups(&self, identifier: &[u8]) -> Result<Vec<Group>, PersistenceError> {
+        todo!()
+    }
+
     async fn add_group<'a>(
         &self,
         identifier: &[u8],

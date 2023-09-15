@@ -51,16 +51,6 @@ impl State {
         tasks
     }
 
-    pub fn get_device_groups(&self, device: &[u8]) -> Vec<Group> {
-        let mut groups = Vec::new();
-        for group in self.groups.values() {
-            if group.contains(device) {
-                groups.push(group.clone());
-            }
-        }
-        groups
-    }
-
     pub fn get_tasks(&self) -> &HashMap<Uuid, Box<dyn Task + Send + Sync>> {
         &self.tasks
     }
