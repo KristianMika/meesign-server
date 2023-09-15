@@ -38,6 +38,11 @@ pub async fn add_group<'a>(
         round: 0, // TODO: check why
         group_certificate: certificate,
     };
+    if !(1..=devices.len() as i32).contains(&threshold) {
+        return Err(PersistenceError::InvalidArgumentError(format!(
+            "Invalid threshold {threshold}"
+        )));
+    }
 
     let devices: Vec<Vec<u8>> = devices
         .iter()
