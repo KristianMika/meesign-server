@@ -6,6 +6,7 @@ use uuid::Uuid;
 use crate::group::Group;
 use crate::interfaces::grpc::format_task;
 use crate::persistence::meesign_repo::MeesignRepo;
+use crate::persistence::persistance_error::PersistenceError;
 use crate::tasks::{Task, TaskResult, TaskStatus};
 use crate::utils;
 use tokio::sync::mpsc::Sender;
@@ -49,10 +50,6 @@ impl State {
             }
         }
         tasks
-    }
-
-    pub fn get_task(&self, task: &Uuid) -> Option<&dyn Task> {
-        self.tasks.get(task).map(|task| task.as_ref() as &dyn Task)
     }
 
     pub fn update_task(
@@ -148,8 +145,9 @@ impl State {
         &self.subscribers
     }
 
-    pub fn send_updates(&mut self, task_id: &Uuid) {
-        let task = self.get_task(task_id).unwrap();
+    pub async fn send_updates(&mut self, task_id: &Uuid) -> Result<(), PersistenceError> {
+        todo!();
+        let task = self.repo.get_task(task_id).await?;
         let mut remove = Vec::new();
 
         for device_id in task.get_devices().iter().map(|device| device.identifier()) {
@@ -169,6 +167,8 @@ impl State {
         for device_id in remove {
             self.remove_subscriber(&device_id);
         }
+
+        Ok(())
     }
 
     pub fn get_repo(&self) -> &Arc<dyn MeesignRepo> {

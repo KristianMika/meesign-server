@@ -144,8 +144,8 @@ impl Mpc for MPCService {
         if device_id.is_some() {
             state.get_repo().activate_device(device_id.unwrap()).await?;
         }
-        let task = state.get_task(&task_id).unwrap();
-        let request = Some(task.get_request());
+        let task = state.get_repo().get_task(&task_id).await?.unwrap();
+        let request = task.request.map(|x| x.as_slice());
 
         let resp = format_task(&task_id, task, device_id, request);
         Ok(Response::new(resp))
@@ -289,8 +289,8 @@ impl Mpc for MPCService {
         {
             let task_id = group_task.id;
             state.send_updates(&task_id);
-            // TODO: use group task
-            let task = state.get_task(&task_id).unwrap();
+            // TODO: use group task + unwrap
+            let task = state.get_repo().get_task(&task_id).await?.unwrap();
             Ok(Response::new(format_task(&task_id, task, None, None)))
         } else {
             Err(Status::failed_precondition("Request failed"))

@@ -14,6 +14,7 @@ use diesel_async::{AsyncConnection, AsyncPgConnection};
 use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use std::env;
 use std::sync::Arc;
+use uuid::Uuid;
 
 mod device;
 mod group;
@@ -183,5 +184,9 @@ impl MeesignRepo for PostgresMeesignRepo {
         //     && timestamp - task.last_update() > 30
         // {
         //     info!("Stale task detected task_id={:?}", hex::encode(task_id));
+    }
+
+    async fn get_task(&self, task_id: &Uuid) -> Result<Option<Task>, PersistenceError> {
+        todo!()
     }
 }
