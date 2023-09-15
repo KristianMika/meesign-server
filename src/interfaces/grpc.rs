@@ -202,9 +202,11 @@ impl Mpc for MPCService {
         let tasks = if let Some(device_id) = device_id {
             state.get_repo().activate_device(&device_id).await?;
             state
+                .get_repo()
                 .get_device_tasks(&device_id)
-                .iter()
-                .map(|(task_id, task)| format_task(task_id, *task, Some(&device_id), None))
+                .await?
+                .into_iter()
+                .map(|task| format_task(&task.id, task, Some(&device_id), None))
                 .collect()
         } else {
             state

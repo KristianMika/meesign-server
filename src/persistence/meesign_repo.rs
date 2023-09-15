@@ -60,6 +60,7 @@ pub trait MeesignRepo: Send + Sync {
 
     async fn get_tasks(&self) -> Result<Vec<Task>, PersistenceError>;
     async fn get_task(&self, task_id: &Uuid) -> Result<Option<Task>, PersistenceError>;
+    async fn get_device_tasks(&self, identifier: &[u8]) -> Result<Vec<Task>, PersistenceError>;
 
     async fn get_tasks_for_restart(&self) -> Result<Vec<Task>, PersistenceError>;
 }

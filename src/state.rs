@@ -37,21 +37,6 @@ impl State {
         uuid
     }
 
-    pub fn get_device_tasks(&self, device: &[u8]) -> Vec<(Uuid, &dyn Task)> {
-        let mut tasks = Vec::new();
-        for (uuid, task) in self.tasks.iter() {
-            // TODO refactor
-            if task.has_device(device)
-                && (task.get_status() != TaskStatus::Finished
-                    || (task.get_status() == TaskStatus::Finished
-                        && !task.device_acknowledged(device)))
-            {
-                tasks.push((*uuid, task.as_ref() as &dyn Task));
-            }
-        }
-        tasks
-    }
-
     pub fn update_task(
         &mut self,
         task_id: &Uuid,

@@ -189,4 +189,11 @@ impl MeesignRepo for PostgresMeesignRepo {
     async fn get_task(&self, task_id: &Uuid) -> Result<Option<Task>, PersistenceError> {
         todo!()
     }
+    async fn get_device_tasks(&self, identifier: &[u8]) -> Result<Vec<Task>, PersistenceError> {
+        todo!()
+        // if task.has_device(device)
+        //             && (task.get_status() != TaskStatus::Finished
+        //                 || (task.get_status() == TaskStatus::Finished
+        //                     && !task.device_acknowledged(device)))
+    }
 }
