@@ -176,14 +176,13 @@ impl Mpc for MPCService {
 
         let mut state = self.state.lock().await;
         state.get_repo().activate_device(&device_id).await?;
-        let result = state.update_task(&task_id, &device_id, &data, attempt);
+        let result = state
+            .update_task(&task_id, &device_id, &data, attempt)
+            .await?;
 
-        match result {
-            Ok(_) => Ok(Response::new(msg::Resp {
-                message: "OK".into(),
-            })),
-            Err(e) => Err(Status::failed_precondition(e)),
-        }
+        Ok(Response::new(msg::Resp {
+            message: "OK".into(),
+        }))
     }
 
     async fn get_tasks(

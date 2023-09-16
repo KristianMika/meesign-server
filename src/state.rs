@@ -1,10 +1,12 @@
 use std::collections::HashMap;
+use std::convert::TryInto;
 
 use log::{debug, error, warn};
 use uuid::Uuid;
 
 use crate::group::Group;
 use crate::interfaces::grpc::format_task;
+use crate::persistence::enums::TaskState;
 use crate::persistence::meesign_repo::MeesignRepo;
 use crate::persistence::persistance_error::PersistenceError;
 use crate::tasks::{Task, TaskResult, TaskStatus};
@@ -14,8 +16,7 @@ use tonic::codegen::Arc;
 use tonic::Status;
 
 pub struct State {
-    // devices: HashMap<Vec<u8>, Arc<Device>>,
-    groups: HashMap<Vec<u8>, Group>,
+    // groups: HashMap<Vec<u8>, Group>,
     tasks: HashMap<Uuid, Box<dyn Task + Send + Sync>>,
     subscribers: HashMap<Vec<u8>, Sender<Result<crate::proto::Task, Status>>>,
     repo: Arc<dyn MeesignRepo>,
@@ -24,43 +25,55 @@ pub struct State {
 impl State {
     pub fn new(repo: Arc<dyn MeesignRepo>) -> Self {
         State {
-            groups: HashMap::new(),
+            // groups: HashMap::new(),
             tasks: HashMap::new(),
             subscribers: HashMap::new(),
             repo,
         }
     }
 
-    pub fn update_task(
+    pub async fn update_task(
         &mut self,
         task_id: &Uuid,
-        device: &[u8],
+        device_identifier: &[u8],
         data: &[u8],
         attempt: u32,
-    ) -> Result<bool, String> {
-        let task = self.tasks.get_mut(task_id).unwrap();
-        if attempt != task.get_attempts() {
+    ) -> Result<bool, PersistenceError> {
+        let Some(task) = self.repo.get_task(task_id).await? else {
+            return Err(PersistenceError::InvalidArgumentError(format!("Task {task_id} doesn't exist")));
+        };
+        let current_attempt: u32 = task.attempt_count.try_into()?;
+        if attempt != current_attempt {
             warn!(
                 "Stale update discarded task_id={} device_id={} attempt={}",
-                utils::hextrunc(task_id.as_bytes()),
-                utils::hextrunc(device),
+                utils::hextrunc(task_id),
+                utils::hextrunc(device_identifier),
                 attempt
             );
-            return Err("Stale update".to_string());
+            return Err(PersistenceError::GeneralError("Stale update".to_string()));
         }
 
-        let previous_status = task.get_status();
-        let update_result = task.update(device, data);
-        if previous_status != TaskStatus::Finished && task.get_status() == TaskStatus::Finished {
-            // TODO join if statements once #![feature(let_chains)] gets stabilized
-            if let TaskResult::GroupEstablished(group) = task.get_result().unwrap() {
-                self.groups.insert(group.identifier().to_vec(), group);
-            }
-        }
-        if let Ok(true) = update_result {
-            self.send_updates(task_id);
-        }
-        update_result
+        let previous_status = task.task_state;
+        // let update_result = task.update(device_identifier, data);
+        // if previous_status != TaskState::Finished && task.task_state == TaskState::Finished {
+        //     if let TaskResult::GroupEstablished(group) = task.get_result().unwrap() {
+        //         self.repo
+        //             .add_group(
+        //                 group.identifier(),
+        //                 group.name(),
+        //                 group.devices(),
+        //                 group.threshold(),
+        //                 group.protocol(),
+        //                 group.certificate(),
+        //             )
+        //             .await?;
+        //     }
+        // }
+        // if let Ok(true) = update_result {
+        //     self.send_updates(task_id);
+        // }
+        // Ok(update_result)
+        todo!()
     }
 
     pub fn decide_task(&mut self, task_id: &Uuid, device: &[u8], decision: bool) -> bool {
