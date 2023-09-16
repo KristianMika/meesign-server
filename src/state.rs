@@ -31,12 +31,6 @@ impl State {
         }
     }
 
-    fn add_task(&mut self, task: Box<dyn Task + Sync + Send>) -> Uuid {
-        let uuid = Uuid::new_v4();
-        self.tasks.insert(uuid, task);
-        uuid
-    }
-
     pub fn update_task(
         &mut self,
         task_id: &Uuid,
@@ -131,20 +125,24 @@ impl State {
     }
 
     pub async fn send_updates(&mut self, task_id: &Uuid) -> Result<(), PersistenceError> {
-        todo!();
         let task = self.repo.get_task(task_id).await?;
         let mut remove = Vec::new();
 
-        for device_id in task.get_devices().iter().map(|device| device.identifier()) {
-            if let Some(tx) = self.subscribers.get(device_id) {
-                let result = tx.try_send(Ok(format_task(task_id, task, Some(device_id), None)));
+        for device in self.repo.get_task_devices(task_id).await? {
+            if let Some(tx) = self.subscribers.get(&device.identifier) {
+                let result = tx.try_send(Ok(format_task(
+                    task_id,
+                    task,
+                    Some(&device.identifier),
+                    None,
+                )));
 
                 if result.is_err() {
                     debug!(
-                        "Closed channel detected device_id={}…",
-                        utils::hextrunc(&device_id[..4])
+                        "Closed channel detected device_id={}",
+                        utils::hextrunc(&device.identifier[..4])
                     );
-                    remove.push(device_id.to_vec());
+                    remove.push(device.identifier);
                 }
             }
         }

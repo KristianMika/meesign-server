@@ -196,4 +196,8 @@ impl MeesignRepo for PostgresMeesignRepo {
         //                 || (task.get_status() == TaskStatus::Finished
         //                     && !task.device_acknowledged(device)))
     }
+
+    async fn get_task_devices(&self, task_id: &Uuid) -> Result<Vec<Device>, PersistenceError> {
+        todo!()
+    }
 }
