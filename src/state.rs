@@ -1,12 +1,11 @@
 use std::collections::HashMap;
-use std::convert::TryInto;
 
-use log::{debug, error, warn};
+use dashmap::DashMap;
+use log::{debug, error, info, warn};
 use uuid::Uuid;
 
-use crate::group::Group;
+use crate::communicator::Communicator;
 use crate::interfaces::grpc::format_task;
-use crate::persistence::enums::TaskState;
 use crate::persistence::meesign_repo::MeesignRepo;
 use crate::persistence::persistance_error::PersistenceError;
 use crate::tasks::{Task, TaskResult, TaskStatus};
@@ -16,19 +15,19 @@ use tonic::codegen::Arc;
 use tonic::Status;
 
 pub struct State {
-    // groups: HashMap<Vec<u8>, Group>,
     tasks: HashMap<Uuid, Box<dyn Task + Send + Sync>>,
     subscribers: HashMap<Vec<u8>, Sender<Result<crate::proto::Task, Status>>>,
     repo: Arc<dyn MeesignRepo>,
+    communicators: DashMap<Uuid, Communicator>,
 }
 
 impl State {
     pub fn new(repo: Arc<dyn MeesignRepo>) -> Self {
         State {
-            // groups: HashMap::new(),
             tasks: HashMap::new(),
             subscribers: HashMap::new(),
             repo,
+            communicators: DashMap::default(),
         }
     }
 
@@ -40,7 +39,9 @@ impl State {
         attempt: u32,
     ) -> Result<bool, PersistenceError> {
         let Some(task) = self.repo.get_task(task_id).await? else {
-            return Err(PersistenceError::InvalidArgumentError(format!("Task {task_id} doesn't exist")));
+            return Err(PersistenceError::InvalidArgumentError(format!(
+                "Task {task_id} doesn't exist"
+            )));
         };
         let current_attempt: u32 = task.attempt_count.try_into()?;
         if attempt != current_attempt {
@@ -102,7 +103,6 @@ impl State {
         task.acknowledge(device);
     }
 
-
     pub fn restart_task(&mut self, task_id: &Uuid) -> bool {
         if self
             .tasks
@@ -138,14 +138,18 @@ impl State {
     }
 
     pub async fn send_updates(&mut self, task_id: &Uuid) -> Result<(), PersistenceError> {
-        let task = self.repo.get_task(task_id).await?;
+        let Some(task) = self.repo.get_task(task_id).await? else {
+            return Err(PersistenceError::InvalidArgumentError(format!(
+                "Task {task_id} doesn't exist"
+            )));
+        };
         let mut remove = Vec::new();
 
         for device in self.repo.get_task_devices(task_id).await? {
             if let Some(tx) = self.subscribers.get(&device.identifier) {
                 let result = tx.try_send(Ok(format_task(
                     task_id,
-                    task,
+                    &*task,
                     Some(&device.identifier),
                     None,
                 )));

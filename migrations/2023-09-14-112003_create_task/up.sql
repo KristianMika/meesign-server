@@ -4,6 +4,7 @@ CREATE TABLE Task (
     protocol_round integer NOT NULL CHECK (protocol_round > 0),
     attempt_count integer NOT NULL CHECK (attempt_count > 0),
     error_message varchar,
+    result_data bytea,
     threshold integer NOT NULL CHECK (threshold > 0),
     last_update timestamptz NOT NULL DEFAULT NOW(),
     task_data bytea,

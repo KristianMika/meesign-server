@@ -2,8 +2,8 @@ use chrono::{DateTime, Local, NaiveDateTime};
 use diesel::{Insertable, Queryable, Selectable};
 use uuid::Uuid;
 
-use crate::persistence::schema::*;
 use crate::proto;
+use crate::{persistence::schema::*, tasks::sign::SignTask};
 
 use super::enums::{KeyType, ProtocolType, TaskState, TaskType};
 
@@ -89,6 +89,7 @@ pub struct Task {
     pub protocol_round: i32,
     pub attempt_count: i32,
     pub error_message: Option<String>,
+    pub result_data: Option<Vec<u8>>,
     pub threshold: i32,
     pub last_update: DateTime<Local>,
     pub task_data: Option<Vec<u8>>,

@@ -10,6 +10,7 @@ pub enum PersistenceError {
     GeneralError(String),
     ExecutionError(diesel::result::Error),
     TryFromIntError(TryFromIntError),
+    DataInconsistency(String),
 }
 
 impl Display for PersistenceError {

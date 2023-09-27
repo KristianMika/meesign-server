@@ -1,9 +1,11 @@
 use crate::device::Device;
 use crate::get_timestamp;
 use crate::group::Group;
+use crate::persistence::persistance_error::PersistenceError;
 use crate::proto::TaskType;
 use crate::tasks::sign::SignTask;
 use crate::tasks::{Task, TaskResult, TaskStatus};
+use async_trait::async_trait;
 use log::{error, info, warn};
 use std::io::{Read, Write};
 use std::process::{Child, Command, Stdio};
@@ -107,6 +109,7 @@ impl SignPDFTask {
     }
 }
 
+#[async_trait]
 impl Task for SignPDFTask {
     fn get_status(&self) -> TaskStatus {
         self.sign_task.get_status()
@@ -171,8 +174,9 @@ impl Task for SignPDFTask {
         self.sign_task.has_device(device_id)
     }
 
-    fn get_devices(&self) -> Vec<Arc<Device>> {
-        self.sign_task.get_devices()
+    async fn get_devices(&self) -> Result<Vec<Device>, PersistenceError> {
+        // self.sign_task.get_devices()
+        todo!()
     }
 
     fn waiting_for(&self, device: &[u8]) -> bool {

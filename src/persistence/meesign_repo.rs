@@ -1,4 +1,9 @@
+use std::sync::Arc;
+
 use uuid::Uuid;
+
+use crate::tasks::sign::SignTask;
+use crate::tasks::Task as TaskTrait;
 
 use super::{
     enums::{KeyType, ProtocolType},
@@ -50,7 +55,7 @@ pub trait MeesignRepo: Send + Sync {
         group_identifier: &Vec<u8>,
         name: &str,
         data: &Vec<u8>,
-    ) -> Result<Task, PersistenceError>;
+    ) -> Result<SignTask, PersistenceError>;
 
     async fn create_decrypt_task(
         &self,
@@ -59,8 +64,11 @@ pub trait MeesignRepo: Send + Sync {
         data: &Vec<u8>,
     ) -> Result<Task, PersistenceError>;
 
-    async fn get_tasks(&self) -> Result<Vec<Task>, PersistenceError>;
-    async fn get_task(&self, task_id: &Uuid) -> Result<Option<Task>, PersistenceError>;
+    async fn get_tasks(&self) -> Result<Vec<Arc<dyn TaskTrait>>, PersistenceError>;
+    async fn get_task(
+        &self,
+        task_id: &Uuid,
+    ) -> Result<Option<Arc<dyn TaskTrait>>, PersistenceError>;
     async fn get_device_tasks(&self, identifier: &[u8]) -> Result<Vec<Task>, PersistenceError>;
 
     async fn get_tasks_for_restart(&self) -> Result<Vec<Task>, PersistenceError>;

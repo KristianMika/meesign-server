@@ -1,6 +1,7 @@
 use crate::communicator::Communicator;
 use crate::device::Device;
 use crate::group::Group;
+use crate::persistence::persistance_error::PersistenceError;
 use crate::proto::{KeyType, ProtocolType, TaskType};
 use crate::protocols::elgamal::ElgamalGroup;
 use crate::protocols::frost::FROSTGroup;
@@ -8,6 +9,7 @@ use crate::protocols::gg18::GG18Group;
 use crate::protocols::Protocol;
 use crate::tasks::{Task, TaskResult, TaskStatus};
 use crate::{get_timestamp, utils};
+use async_trait::async_trait;
 use log::{info, warn};
 use meesign_crypto::proto::{Message as _, ProtocolMessage};
 use prost::Message as _;
@@ -151,6 +153,7 @@ impl GroupTask {
     }
 }
 
+#[async_trait]
 impl Task for GroupTask {
     fn get_status(&self) -> TaskStatus {
         match &self.result {
@@ -247,8 +250,9 @@ impl Task for GroupTask {
             .any(|x| x == device_id);
     }
 
-    fn get_devices(&self) -> Vec<Arc<Device>> {
-        self.devices.clone()
+    async fn get_devices(&self) -> Result<Vec<Device>, PersistenceError> {
+        // self.devices.clone()
+        todo!()
     }
 
     fn waiting_for(&self, device: &[u8]) -> bool {

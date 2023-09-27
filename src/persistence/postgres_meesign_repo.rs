@@ -1,3 +1,6 @@
+use crate::tasks::sign::SignTask;
+use crate::tasks::Task as TaskTrait;
+
 use self::device::{activate_device, add_device, get_devices};
 use self::group::{add_group, get_groups};
 use self::task::create_task;
@@ -23,6 +26,7 @@ mod utils;
 
 const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
 
+#[derive(Clone)]
 pub struct PostgresMeesignRepo {
     pg_pool: Arc<PgPool>,
 }
@@ -151,8 +155,8 @@ impl MeesignRepo for PostgresMeesignRepo {
         group_identifier: &Vec<u8>,
         name: &str,
         data: &Vec<u8>,
-    ) -> Result<Task, PersistenceError> {
-        create_task(
+    ) -> Result<SignTask, PersistenceError> {
+        let task = create_task(
             &mut self.get_async_connection().await?,
             TaskType::Sign,
             name,
@@ -162,7 +166,14 @@ impl MeesignRepo for PostgresMeesignRepo {
             None,
             None,
         )
-        .await
+        .await?;
+        let task = SignTask::from_model(task, Arc::new(self.clone()));
+        let Some(task) = task else {
+            return Err(PersistenceError::DataInconsistency(
+                "Couldn't create signing task from model".into(),
+            ));
+        };
+        Ok(task)
     }
     async fn create_decrypt_task(
         &self,
@@ -173,7 +184,7 @@ impl MeesignRepo for PostgresMeesignRepo {
         todo!()
     }
 
-    async fn get_tasks(&self) -> Result<Vec<Task>, PersistenceError> {
+    async fn get_tasks(&self) -> Result<Vec<Arc<dyn TaskTrait>>, PersistenceError> {
         todo!()
     }
 
@@ -186,7 +197,10 @@ impl MeesignRepo for PostgresMeesignRepo {
         //     info!("Stale task detected task_id={:?}", hex::encode(task_id));
     }
 
-    async fn get_task(&self, task_id: &Uuid) -> Result<Option<Task>, PersistenceError> {
+    async fn get_task(
+        &self,
+        task_id: &Uuid,
+    ) -> Result<Option<Arc<dyn TaskTrait>>, PersistenceError> {
         todo!()
     }
     async fn get_device_tasks(&self, identifier: &[u8]) -> Result<Vec<Task>, PersistenceError> {

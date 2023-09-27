@@ -69,6 +69,7 @@ diesel::table! {
         protocol_round -> Int4,
         attempt_count -> Int4,
         error_message -> Nullable<Varchar>,
+        result_data -> Nullable<Bytea>,
         threshold -> Int4,
         last_update -> Timestamptz,
         task_data -> Nullable<Bytea>,

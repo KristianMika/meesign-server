@@ -1,11 +1,13 @@
 use crate::communicator::Communicator;
 use crate::device::Device;
 use crate::group::Group;
+use crate::persistence::persistance_error::PersistenceError;
 use crate::proto::{DecryptRequest, ProtocolType, TaskType};
 use crate::protocols::elgamal::ElgamalDecrypt;
 use crate::protocols::Protocol;
 use crate::tasks::{Task, TaskResult, TaskStatus};
 use crate::{get_timestamp, utils};
+use async_trait::async_trait;
 use log::info;
 use meesign_crypto::proto::{Message as _, ProtocolMessage};
 use prost::Message as _;
@@ -125,6 +127,7 @@ impl DecryptTask {
     }
 }
 
+#[async_trait]
 impl Task for DecryptTask {
     fn get_status(&self) -> TaskStatus {
         match &self.result {
@@ -202,8 +205,9 @@ impl Task for DecryptTask {
         self.group.contains(device_id)
     }
 
-    fn get_devices(&self) -> Vec<Arc<Device>> {
-        self.group.devices().to_vec()
+    async fn get_devices(&self) -> Result<Vec<Device>, PersistenceError> {
+        // self.group.devices().to_vec()
+        todo!()
     }
 
     fn waiting_for(&self, device: &[u8]) -> bool {

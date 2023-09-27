@@ -5,7 +5,8 @@ pub(crate) mod sign_pdf;
 
 use crate::device::Device;
 use crate::group::Group;
-use tonic::codegen::Arc;
+use crate::persistence::persistance_error::PersistenceError;
+use async_trait::async_trait;
 
 #[derive(Clone, PartialEq, Eq)]
 pub enum TaskStatus {
@@ -35,6 +36,7 @@ impl TaskResult {
     }
 }
 
+#[async_trait]
 pub trait Task {
     fn get_status(&self) -> TaskStatus;
     fn get_type(&self) -> crate::proto::TaskType;
@@ -60,7 +62,7 @@ pub trait Task {
     fn is_approved(&self) -> bool;
 
     fn has_device(&self, device_id: &[u8]) -> bool;
-    fn get_devices(&self) -> Vec<Arc<Device>>;
+    async fn get_devices(&self) -> Result<Vec<Device>, PersistenceError>;
     fn waiting_for(&self, device_id: &[u8]) -> bool;
 
     /// Store `decision` by `device_id`
