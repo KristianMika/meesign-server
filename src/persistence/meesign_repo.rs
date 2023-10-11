@@ -36,7 +36,17 @@ pub trait MeesignRepo: Send + Sync {
         protocol: ProtocolType,
         certificate: Option<&[u8]>,
     ) -> Result<Group, PersistenceError>;
-    // async fn get_group(&self, group_identifier: &Vec<u8>) -> Option<Group>;
+
+    async fn get_group(
+        &self,
+        group_identifier: &Vec<u8>,
+    ) -> Result<Option<Group>, PersistenceError>;
+
+    async fn does_group_contain_device(
+        &self,
+        group_id: &[u8],
+        device_id: &[u8],
+    ) -> Result<bool, PersistenceError>;
     async fn get_device_groups(&self, identifier: &[u8]) -> Result<Vec<Group>, PersistenceError>;
 
     async fn get_groups(&self) -> Result<Vec<Group>, PersistenceError>;

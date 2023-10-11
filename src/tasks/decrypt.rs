@@ -201,8 +201,9 @@ impl Task for DecryptTask {
         self.communicator.accept_count() >= self.group.threshold()
     }
 
-    fn has_device(&self, device_id: &[u8]) -> bool {
-        self.group.contains(device_id)
+    async fn has_device(&self, device_id: &[u8]) -> Result<bool, PersistenceError> {
+        // self.group.contains(device_id)
+        todo!();
     }
 
     async fn get_devices(&self) -> Result<Vec<Device>, PersistenceError> {

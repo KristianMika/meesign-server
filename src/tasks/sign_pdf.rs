@@ -67,7 +67,7 @@ impl SignPDFTask {
 
         let hash = request_hash(
             &mut pdfhelper,
-            self.sign_task.get_group().certificate().unwrap(),
+            self.sign_task.get_group().unwrap().certificate().unwrap(),
         );
         if hash.is_empty() {
             self.result = Some(Err("Task failed (invalid PDF)".to_string()));
@@ -90,7 +90,7 @@ impl SignPDFTask {
 
             info!(
                 "PDF signed by group_id={}",
-                hex::encode(self.sign_task.get_group().identifier())
+                hex::encode(self.sign_task.get_group().unwrap().identifier())
             );
             self.result = Some(Ok(signed));
         } else {
@@ -170,8 +170,9 @@ impl Task for SignPDFTask {
         self.sign_task.is_approved()
     }
 
-    fn has_device(&self, device_id: &[u8]) -> bool {
-        self.sign_task.has_device(device_id)
+    async fn has_device(&self, device_id: &[u8]) -> Result<bool, PersistenceError> {
+        // self.group.contains(device_id)
+        todo!();
     }
 
     async fn get_devices(&self) -> Result<Vec<Device>, PersistenceError> {

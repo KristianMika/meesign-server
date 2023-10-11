@@ -1,6 +1,9 @@
 use crate::communicator::Communicator;
 use crate::device::Device;
 use crate::group::Group;
+use crate::persistence::enums;
+use crate::persistence::meesign_repo::MeesignRepo;
+use crate::persistence::models::{FromModelParts, Task as TaskModel};
 use crate::persistence::persistance_error::PersistenceError;
 use crate::proto::{KeyType, ProtocolType, TaskType};
 use crate::protocols::elgamal::ElgamalGroup;
@@ -32,6 +35,7 @@ pub struct GroupTask {
 
 impl GroupTask {
     pub fn try_new(
+        repo: Arc<dyn MeesignRepo>,
         name: &str,
         devices: &[Arc<Device>],
         threshold: u32,
@@ -95,6 +99,48 @@ impl GroupTask {
             request,
             last_update: get_timestamp(),
             attempts: 0,
+        })
+    }
+
+    pub fn from_model(task: TaskModel, repo: Arc<dyn MeesignRepo>) -> Option<Self> {
+        // todo: key type and protocol type brobably shouldn't be nullable
+        let threshold = task.threshold as u32;
+        let party_count = 0; // todo
+        let protocol: Box<dyn Protocol + Send + Sync> =
+            match (task.protocol_type.unwrap(), task.key_type.unwrap()) {
+                (enums::ProtocolType::Gg18, enums::KeyType::SignPDF) => {
+                    Box::new(GG18Group::new(party_count, threshold))
+                }
+                (enums::ProtocolType::Gg18, enums::KeyType::SignChallenge) => {
+                    Box::new(GG18Group::new(party_count, threshold))
+                }
+                (enums::ProtocolType::Frost, enums::KeyType::SignChallenge) => {
+                    Box::new(FROSTGroup::new(party_count, threshold))
+                }
+                (enums::ProtocolType::ElGamal, enums::KeyType::Decrypt) => {
+                    Box::new(ElgamalGroup::new(party_count, threshold))
+                }
+                _ => {
+                    warn!(
+                        "Protocol {:?} does not support {:?} key type",
+                        task.protocol_type,
+                        task.key_type.unwrap()
+                    );
+                    return Err("Unsupported protocol type and key type combination".into());
+                }
+            };
+
+        Some(Self {
+            protocol,
+            request: task.request.unwrap(),
+            last_update: task.last_update.timestamp() as u64,
+            attempts: task.attempt_count as u32,
+            name: todo!(),
+            threshold,
+            key_type: task.key_type.unwrap(),
+            devices: todo!(),
+            communicator: todo!(),
+            result: todo!(),
         })
     }
 
@@ -242,12 +288,13 @@ impl Task for GroupTask {
         self.communicator.accept_count() == self.devices.len() as u32
     }
 
-    fn has_device(&self, device_id: &[u8]) -> bool {
-        return self
-            .devices
-            .iter()
-            .map(|device| device.identifier())
-            .any(|x| x == device_id);
+    async fn has_device(&self, device_id: &[u8]) -> Result<bool, PersistenceError> {
+        // return self
+        //     .devices
+        //     .iter()
+        //     .map(|device| device.identifier())
+        //     .any(|x| x == device_id);
+        todo!()
     }
 
     async fn get_devices(&self) -> Result<Vec<Device>, PersistenceError> {

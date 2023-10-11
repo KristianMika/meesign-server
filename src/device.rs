@@ -1,6 +1,8 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::time::{SystemTime, UNIX_EPOCH};
 
+use crate::persistence::models;
+
 #[derive(Debug)]
 pub struct Device {
     identifier: Vec<u8>,
@@ -61,6 +63,17 @@ impl From<&Device> for crate::proto::Device {
             name: device.name().to_string(),
             certificate: device.certificate().to_vec(),
             last_active: device.last_active(),
+        }
+    }
+}
+
+impl From<models::Device> for Device {
+    fn from(value: models::Device) -> Self {
+        Self {
+            identifier: value.identifier,
+            name: value.device_name,
+            certificate: value.device_certificate,
+            last_active: AtomicU64::new(value.last_active.timestamp_millis() as u64),
         }
     }
 }

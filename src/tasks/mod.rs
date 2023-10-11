@@ -3,10 +3,18 @@ pub(crate) mod group;
 pub(crate) mod sign;
 pub(crate) mod sign_pdf;
 
+use std::sync::Arc;
+
 use crate::device::Device;
 use crate::group::Group;
+use crate::persistence::enums::TaskType;
+use crate::persistence::meesign_repo::MeesignRepo;
+use crate::persistence::models;
 use crate::persistence::persistance_error::PersistenceError;
 use async_trait::async_trait;
+
+use self::group::GroupTask;
+use self::sign::SignTask;
 
 #[derive(Clone, PartialEq, Eq)]
 pub enum TaskStatus {
@@ -61,7 +69,7 @@ pub trait Task {
     /// True if the task has been approved
     fn is_approved(&self) -> bool;
 
-    fn has_device(&self, device_id: &[u8]) -> bool;
+    async fn has_device(&self, device_id: &[u8]) -> Result<bool, PersistenceError>;
     async fn get_devices(&self) -> Result<Vec<Device>, PersistenceError>;
     fn waiting_for(&self, device_id: &[u8]) -> bool;
 
@@ -78,4 +86,11 @@ pub trait Task {
     fn get_request(&self) -> &[u8];
 
     fn get_attempts(&self) -> u32;
+}
+
+fn task_from_model(model: models::Task, repo: Arc<dyn MeesignRepo>) -> Arc<dyn Task> {
+    match model.task_type {
+        TaskType::Group => Arc::new(GroupTask::from_model(model, repo)).unwrap(),
+        TaskType::Sign => Arc::new(SignTask::from_model(model, repo)).unwrap(),
+    }
 }

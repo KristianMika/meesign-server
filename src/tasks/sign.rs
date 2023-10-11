@@ -2,7 +2,7 @@ use crate::communicator::Communicator;
 use crate::device::Device;
 use crate::group::Group;
 use crate::persistence::meesign_repo::MeesignRepo;
-use crate::persistence::models::Task as TaskModel;
+use crate::persistence::models::{FromModelParts, Task as TaskModel};
 use crate::persistence::persistance_error::PersistenceError;
 use crate::proto::{ProtocolType, SignRequest, TaskType};
 use crate::protocols::frost::FROSTSign;
@@ -20,6 +20,7 @@ use uuid::Uuid;
 pub struct SignTask {
     // group: Group,
     id: Uuid,
+    group_identifier: Vec<u8>,
     result: Option<Result<Vec<u8>, String>>,
     pub(super) data: Vec<u8>,
     preprocessed: Option<Vec<u8>>,
@@ -75,13 +76,8 @@ impl SignTask {
                 return None;
             }
         };
-        let mut result = None;
-        if task.error_message.is_some() {
-            result = Some(Err(task.error_message.unwrap()));
-        }
-        if task.result_data.is_some() {
-            result = Some(Ok(task.result_data.unwrap()));
-        }
+        let result = Option::from_model_parts(task.task_data, task.error_message);
+
         Some(Self {
             repo,
             result,
@@ -95,7 +91,7 @@ impl SignTask {
         })
     }
 
-    pub fn get_group(&self) -> &Group {
+    pub fn get_group(&self) -> Result<&Group, PersistenceError> {
         todo!()
     }
 
@@ -106,7 +102,8 @@ impl SignTask {
 
     pub(super) fn start_task(&mut self) {
         let mut communicator = self.get_communicator().unwrap();
-        assert!(communicator.accept_count() >= self.group.threshold());
+        let group = self.get_group().unwrap();
+        assert!(communicator.accept_count() >= group.threshold());
         self.protocol.initialize(
             &mut communicator,
             self.preprocessed.as_ref().unwrap_or(&self.data),
@@ -130,7 +127,7 @@ impl SignTask {
 
         info!(
             "Signature created by group_id={}",
-            utils::hextrunc(self.group.identifier())
+            utils::hextrunc(self.group_identifier)
         );
 
         self.result = Some(Ok(signature));
@@ -153,7 +150,9 @@ impl SignTask {
         data: &[u8],
     ) -> Result<bool, String> {
         let communicator = self.get_communicator().unwrap();
-        if communicator.accept_count() < self.group.threshold() {
+        let group = self.get_group().unwrap();
+
+        if communicator.accept_count() < group.threshold() {
             return Err("Not enough agreements to proceed with the protocol.".to_string());
         }
 
@@ -177,10 +176,11 @@ impl SignTask {
         communicator.decide(device_id, decision);
         self.last_update = get_timestamp();
         if self.result.is_none() && self.protocol.round() == 0 {
-            if communicator.reject_count() >= self.group.reject_threshold() {
+            let group = self.get_group().unwrap();
+            if communicator.reject_count() >= group.reject_threshold() {
                 self.result = Some(Err("Task declined".to_string()));
                 return Some(false);
-            } else if communicator.accept_count() >= self.group.threshold() {
+            } else if communicator.accept_count() >= group.threshold() {
                 return Some(true);
             }
         }
@@ -263,16 +263,26 @@ impl Task for SignTask {
 
     fn is_approved(&self) -> bool {
         let communicator = self.get_communicator().unwrap();
-
-        communicator.accept_count() >= self.group.threshold()
+        let group = self.get_group().unwrap();
+        communicator.accept_count() >= group.threshold()
     }
 
-    fn has_device(&self, device_id: &[u8]) -> bool {
-        self.group.contains(device_id)
+    async fn has_device(&self, device_id: &[u8]) -> Result<bool, PersistenceError> {
+        //  self.group.contains(device_id)
+        self.repo
+            .does_group_contain_device(&self.group_identifier, device_id)
+            .await
     }
 
     async fn get_devices(&self) -> Result<Vec<Device>, PersistenceError> {
-        self.repo.get_task_devices(&self.id).await.unwrap()
+        let devices = self
+            .repo
+            .get_task_devices(&self.id)
+            .await?
+            .into_iter()
+            .map(|d| Device::from(d))
+            .collect();
+        Ok(devices)
     }
 
     fn waiting_for(&self, device: &[u8]) -> bool {

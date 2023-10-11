@@ -117,3 +117,18 @@ pub struct NewTask<'a> {
     pub key_type: Option<KeyType>,
     pub protocol_type: Option<ProtocolType>,
 }
+
+pub trait FromModelParts {
+    fn from_model_parts(data: Option<Vec<u8>>, error: Option<String>) -> Self;
+}
+
+impl FromModelParts for Option<Result<Vec<u8>, String>> {
+    fn from_model_parts(data: Option<Vec<u8>>, error: Option<String>) -> Self {
+        match (data, error) {
+            (None, Some(error)) => Some(Err(error)),
+            (Some(data), None) => Some(Ok(data)),
+            (None, None) => None,
+            _ => Some(Err("Inconsistent data state".to_string())),
+        }
+    }
+}
