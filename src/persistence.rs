@@ -2,8 +2,9 @@
 mod tests;
 
 mod enums;
-pub mod meesign_repo;
+mod error;
 mod models;
-mod persistance_error;
-pub mod postgres_meesign_repo;
+mod repository;
 mod schema;
+
+pub use repository::Repository;
