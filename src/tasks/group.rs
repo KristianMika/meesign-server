@@ -62,11 +62,11 @@ impl GroupTask {
 
         if devices_len < 1 {
             warn!("Invalid number of devices {}", devices_len);
-            return Err("Invalid input".into());
+            // return Err("Invalid input".into());
         }
         if !protocol.get_type().check_threshold(threshold, devices_len) {
             warn!("Invalid group threshold {}-of-{}", threshold, devices_len);
-            return Err("Invalid input".into());
+            // return Err("Invalid input".into());
         }
 
         let mut devices = devices.to_vec();

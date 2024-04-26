@@ -35,7 +35,7 @@ impl Communicator {
     /// * `devices` - Sorted list of devices; items of the list need to be unique
     /// * `threshold` - The minimal number of devices to successfully complete the task
     pub fn new(devices: &[Arc<Device>], threshold: u32, protocol_type: ProtocolType) -> Self {
-        assert!(devices.len() > 1);
+        // assert!(devices.len() > 1);
         assert!(threshold <= devices.len() as u32);
         // TODO uncomment once is_sorted is stabilized
         // assert!(devices.is_sorted());
