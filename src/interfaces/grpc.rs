@@ -278,13 +278,16 @@ impl Mpc for MPCService {
                 .collect::<Vec<String>>(),
             threshold
         );
-
+        let device_id_references: Vec<&[u8]> = device_ids
+            .iter()
+            .map(|device_id| device_id.as_ref())
+            .collect();
         let mut state = self.state.lock().await;
         match state
             .get_repo()
             .create_group_task(
                 &name,
-                &device_ids,
+                &device_id_references,
                 threshold,
                 protocol.into(),
                 key_type.into(),
