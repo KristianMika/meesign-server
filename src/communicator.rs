@@ -1,6 +1,8 @@
-use crate::device::Device;
-use crate::get_timestamp;
+use crate::persistence::Device;
+use crate::persistence::PgPool;
 use crate::proto::ProtocolType;
+use chrono::Duration;
+use chrono::Local;
 use meesign_crypto::proto::{Message, ProtocolMessage};
 use rand::prelude::SliceRandom;
 use rand::thread_rng;
@@ -13,7 +15,7 @@ pub struct Communicator {
     /// The minimal number of parties needed to successfully complete the task
     threshold: u32,
     /// Ordered list of devices
-    device_list: Vec<Arc<Device>>,
+    device_list: Vec<Device>,
     /// Ordered list of active devices (participating in the protocol)
     active_devices: Option<Vec<Vec<u8>>>,
     /// A mapping of device identifiers to their Task decision
@@ -34,24 +36,26 @@ impl Communicator {
     /// # Arguments
     /// * `devices` - Sorted list of devices; items of the list need to be unique
     /// * `threshold` - The minimal number of devices to successfully complete the task
-    pub fn new(devices: &[Arc<Device>], threshold: u32, protocol_type: ProtocolType) -> Self {
-        // assert!(devices.len() > 1);
-        assert!(threshold <= devices.len() as u32);
+    pub fn new(device_list: Vec<Device>, threshold: u32, protocol_type: ProtocolType) -> Self {
+        assert!(device_list.len() > 1);
+        assert!(threshold <= device_list.len() as u32);
         // TODO uncomment once is_sorted is stabilized
         // assert!(devices.is_sorted());
 
+        let decisions = device_list
+            .iter()
+            .map(|x| (x.identifier().to_vec(), None))
+            .collect();
+        let acknowledgements = device_list
+            .iter()
+            .map(|x| (x.identifier().to_vec(), false))
+            .collect();
         let mut communicator = Communicator {
             threshold,
-            device_list: devices.iter().map(Arc::clone).collect(),
+            device_list,
             active_devices: None,
-            decisions: devices
-                .iter()
-                .map(|x| (x.identifier().to_vec(), None))
-                .collect(),
-            acknowledgements: devices
-                .iter()
-                .map(|x| (x.identifier().to_vec(), false))
-                .collect(),
+            decisions,
+            acknowledgements,
             input: Vec::new(),
             output: Vec::new(),
             protocol_type,
@@ -167,7 +171,7 @@ impl Communicator {
     }
 
     /// Set active devices
-    pub fn set_active_devices(&mut self) -> Vec<Vec<u8>> {
+    pub fn set_active_devices(&mut self, pg_pool: Option<Arc<PgPool>>) -> Vec<Vec<u8>> {
         assert!(self.accept_count() >= self.threshold);
         let agreeing_devices = self
             .device_list
@@ -175,14 +179,20 @@ impl Communicator {
             .filter(|device| self.decisions.get(device.identifier()) == Some(&Some(true)))
             .collect::<Vec<_>>();
 
-        let timestamp = get_timestamp();
-        let connected_devices = agreeing_devices
-            .iter()
-            .filter(|device| device.last_active() > timestamp - 5)
-            .map(Deref::deref)
-            .collect::<Vec<_>>();
+        let latest_acceptable_time = Local::now() - Duration::seconds(5);
+        let connected_devices = match pg_pool {
+            Some(pg_pool) => {
+                todo!();
+                agreeing_devices
+                    .iter()
+                    .filter(|device| device.last_active() > &latest_acceptable_time)
+                    .map(Deref::deref)
+                    .collect::<Vec<_>>()
+            }
+            None => self.device_list.iter().collect::<Vec<_>>(),
+        };
 
-        let (devices, indices): (&Vec<&Arc<Device>>, Vec<_>) =
+        let (devices, indices): (&Vec<&Device>, Vec<_>) =
             if connected_devices.len() >= self.threshold as usize {
                 (&connected_devices, (0..connected_devices.len()).collect())
             } else {
@@ -293,28 +303,28 @@ mod tests {
     #[test]
     #[should_panic]
     fn communicator_with_no_devices() {
-        Communicator::new(&[], 0, ProtocolType::Gg18);
+        Communicator::new(vec![], 0, ProtocolType::Gg18);
     }
 
     #[test]
     #[should_panic]
     fn communicator_too_large_threshold() {
-        Communicator::new(&prepare_devices(2), 3, ProtocolType::Gg18);
+        Communicator::new(prepare_devices(2), 3, ProtocolType::Gg18);
     }
 
     #[test]
     fn empty_communicator() {
         let devices = prepare_devices(5);
-        let d0 = devices[0].identifier();
-        let communicator = Communicator::new(&devices, 3, ProtocolType::Gg18);
+        let d0 = devices[0].identifier().clone();
+        let communicator = Communicator::new(devices, 3, ProtocolType::Gg18);
         assert_eq!(communicator.accept_count(), 0);
         assert_eq!(communicator.reject_count(), 0);
         assert_eq!(communicator.round_received(), false);
-        assert_eq!(communicator.get_message(d0), None);
+        assert_eq!(communicator.get_message(&d0), None);
         assert_eq!(communicator.get_message(&[0x00, 0x00]), None);
-        assert_eq!(communicator.device_decided(d0), false);
+        assert_eq!(communicator.device_decided(&d0), false);
         assert_eq!(communicator.device_decided(&[0x00, 0x00]), false);
-        assert_eq!(communicator.waiting_for(d0), false);
+        assert_eq!(communicator.waiting_for(&d0), false);
         assert_eq!(communicator.waiting_for(&[0x00, 0x00]), false);
         assert_eq!(communicator.get_active_devices(), None);
         assert_eq!(communicator.get_final_message(), None);
@@ -323,7 +333,7 @@ mod tests {
     #[test]
     fn valid_communicator() {
         let devices = prepare_devices(5);
-        let mut communicator = Communicator::new(&devices, 3, ProtocolType::Gg18);
+        let mut communicator = Communicator::new(devices.clone(), 3, ProtocolType::Gg18);
         assert_eq!(communicator.device_decided(devices[0].identifier()), false);
         communicator.decide(devices[0].identifier(), true);
         assert_eq!(communicator.accept_count(), 1);
@@ -346,7 +356,7 @@ mod tests {
         assert_eq!(communicator.device_decided(devices[1].identifier()), true);
         assert_eq!(communicator.device_decided(devices[3].identifier()), false);
         assert_eq!(communicator.get_active_devices(), None);
-        communicator.set_active_devices();
+        communicator.set_active_devices(None);
         let active_indices = [0, 1, 4];
         assert_eq!(
             communicator.get_active_devices(),
@@ -412,14 +422,18 @@ mod tests {
     #[test]
     fn unknown_device_decide() {
         let devices = prepare_devices(3);
-        let mut communicator = Communicator::new(&devices[..2], 2, ProtocolType::Gg18);
+        let mut communicator = Communicator::new(
+            devices.iter().cloned().take(2).collect(),
+            2,
+            ProtocolType::Gg18,
+        );
         assert_eq!(communicator.decide(devices[2].identifier(), true), false);
     }
 
     #[test]
     fn repeated_device_decide() {
         let devices = prepare_devices(2);
-        let mut communicator = Communicator::new(&devices, 2, ProtocolType::Gg18);
+        let mut communicator = Communicator::new(devices.clone(), 2, ProtocolType::Gg18);
         assert_eq!(communicator.decide(devices[0].identifier(), true), true);
         assert_eq!(communicator.decide(devices[0].identifier(), true), false);
     }
@@ -428,7 +442,7 @@ mod tests {
     #[should_panic]
     fn not_enough_messages() {
         let devices = prepare_devices(3);
-        let mut communicator = Communicator::new(&devices, 3, ProtocolType::Gg18);
+        let mut communicator = Communicator::new(devices.clone(), 3, ProtocolType::Gg18);
         communicator.decide(devices[0].identifier(), true);
         communicator.decide(devices[1].identifier(), true);
         communicator.receive_messages(devices[0].identifier(), vec![vec![]; 1]);
@@ -438,7 +452,7 @@ mod tests {
     #[should_panic]
     fn too_many_messages() {
         let devices = prepare_devices(3);
-        let mut communicator = Communicator::new(&devices, 3, ProtocolType::Gg18);
+        let mut communicator = Communicator::new(devices.clone(), 3, ProtocolType::Gg18);
         communicator.decide(devices[0].identifier(), true);
         communicator.decide(devices[1].identifier(), true);
         communicator.receive_messages(devices[0].identifier(), vec![vec![]; 3]);
@@ -448,22 +462,22 @@ mod tests {
     #[should_panic]
     fn not_enough_accepts() {
         let devices = prepare_devices(5);
-        let mut communicator = Communicator::new(&devices, 3, ProtocolType::Gg18);
+        let mut communicator = Communicator::new(devices.clone(), 3, ProtocolType::Gg18);
         communicator.decide(devices[0].identifier(), true);
         communicator.decide(devices[2].identifier(), false);
         communicator.decide(devices[4].identifier(), true);
-        communicator.set_active_devices();
+        communicator.set_active_devices(None);
     }
 
     #[test]
     fn more_than_threshold_accepts() {
         let threshold = 3;
         let devices = prepare_devices(5);
-        let mut communicator = Communicator::new(&devices, threshold, ProtocolType::Gg18);
+        let mut communicator = Communicator::new(devices.clone(), threshold, ProtocolType::Gg18);
         for device in devices {
             communicator.decide(device.identifier(), true);
         }
-        communicator.set_active_devices();
+        communicator.set_active_devices(None);
         assert_eq!(
             communicator.get_active_devices().as_ref().map(Vec::len),
             Some(threshold as usize)
@@ -473,10 +487,10 @@ mod tests {
     #[test]
     fn send_all() {
         let devices = prepare_devices(3);
-        let mut communicator = Communicator::new(&devices, 2, ProtocolType::Gg18);
+        let mut communicator = Communicator::new(devices.clone(), 2, ProtocolType::Gg18);
         communicator.decide(devices[0].identifier(), true);
         communicator.decide(devices[2].identifier(), true);
-        communicator.set_active_devices();
+        communicator.set_active_devices(None);
         assert_eq!(
             communicator.get_active_devices(),
             Some(vec![
@@ -499,28 +513,26 @@ mod tests {
     #[test]
     fn unknown_device_acknowledgement() {
         let devices = prepare_devices(3);
-        let mut communicator = Communicator::new(&devices[..2], 2, ProtocolType::Gg18);
+        let mut communicator = Communicator::new(
+            devices.iter().cloned().take(2).collect(),
+            2,
+            ProtocolType::Gg18,
+        );
         assert_eq!(communicator.acknowledge(devices[2].identifier()), false);
     }
 
     #[test]
     fn repeated_device_acknowledgement() {
         let devices = prepare_devices(2);
-        let mut communicator = Communicator::new(&devices, 2, ProtocolType::Gg18);
+        let mut communicator = Communicator::new(devices.clone(), 2, ProtocolType::Gg18);
         assert_eq!(communicator.acknowledge(devices[0].identifier()), true);
         assert_eq!(communicator.acknowledge(devices[0].identifier()), false);
     }
 
-    fn prepare_devices(n: usize) -> Vec<Arc<Device>> {
+    fn prepare_devices(n: usize) -> Vec<Device> {
         assert!(n < u8::MAX as usize);
         (0..n)
-            .map(|i| {
-                Arc::new(Device::new(
-                    vec![i as u8],
-                    format!("d{}", i),
-                    vec![0xf0 | i as u8],
-                ))
-            })
+            .map(|i| Device::new(vec![i as u8], format!("d{}", i), vec![0xf0 | i as u8]))
             .collect()
     }
 }
