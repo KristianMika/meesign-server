@@ -6,14 +6,17 @@ RUN cd meesign-helper && mvn clean compile assembly:single
 
 
 # Build and statically link the meesign binary
-FROM kristianmika/rust-musl-builder:stable as rust-builder
+FROM nwtgck/rust-musl-builder:latest as rust-builder
 WORKDIR /home/rust/src/
 ADD --chown=rust:rust . .
 # Install protobuf compiler
 ENV PATH="${PATH}:/home/rust/.local/bin"
-RUN curl -LO "https://github.com/protocolbuffers/protobuf/releases/download/v21.9/protoc-21.9-linux-x86_64.zip" && \
-    unzip ./protoc-21.9-linux-x86_64.zip -d $HOME/.local && \
-    rm -rf ./protoc-21.9-linux-x86_64.zip && \
+ENV DEBIAN_FRONTEND=noninteractive
+ARG PROTOC_VERSION=26.1
+RUN sudo apt-get update && sudo apt-get install --assume-yes unzip
+RUN curl -LO "https://github.com/protocolbuffers/protobuf/releases/download/v${PROTOC_VERSION}/protoc-${PROTOC_VERSION}-linux-x86_64.zip" && \
+    unzip ./protoc-${PROTOC_VERSION}-linux-x86_64.zip -d $HOME/.local && \
+    rm -rf ./protoc-${PROTOC_VERSION}-linux-x86_64.zip && \
     protoc --version
 RUN cargo build --release --target x86_64-unknown-linux-musl
 
@@ -35,14 +38,14 @@ ARG REVISION
 ARG BUILD_VERSION
 
 LABEL org.opencontainers.image.created=${BUILD_DATE} \
-      org.opencontainers.image.source="https://github.com/crocs-muni/meesign-server" \
-      org.opencontainers.image.version=${BUILD_VERSION} \
-      org.opencontainers.image.revision=${REVISION} \
-      org.opencontainers.image.licenses="MIT" \
-      org.opencontainers.image.title="meesign-server" \
-      org.opencontainers.image.description="Meesign server for threshold ECDSA signatures." \
-      org.opencontainers.image.vendor="CRoCS, FI MUNI" \
-      org.label-schema.docker.cmd="docker run --detach --publish 1337:1337 --volume `pwd`/keys/:/meesign/keys/ crocsmuni/meesign:latest"
+    org.opencontainers.image.source="https://github.com/crocs-muni/meesign-server" \
+    org.opencontainers.image.version=${BUILD_VERSION} \
+    org.opencontainers.image.revision=${REVISION} \
+    org.opencontainers.image.licenses="MIT" \
+    org.opencontainers.image.title="meesign-server" \
+    org.opencontainers.image.description="Meesign server for threshold ECDSA signatures." \
+    org.opencontainers.image.vendor="CRoCS, FI MUNI" \
+    org.label-schema.docker.cmd="docker run --detach --publish 1337:1337 --volume `pwd`/keys/:/meesign/keys/ crocsmuni/meesign:latest"
 
 EXPOSE ${SERVER_PORT}
 # running the binary from a specific directory as meesign helper requires 
