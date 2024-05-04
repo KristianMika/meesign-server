@@ -98,8 +98,8 @@ impl Mpc for MPCService {
 
         let mut state = self.state.lock().await;
         let task_id = state.add_sign_task(&group_id, &name, &data).await?;
-        let task = state.get_task(&task_id).unwrap();
-        Ok(Response::new(format_task(&task_id, task, None, None)))
+        let task = state.get_task(&task_id).await?.unwrap();
+        Ok(Response::new(format_task(&task_id, &*task, None, None)))
     }
 
     async fn decrypt(
@@ -117,8 +117,8 @@ impl Mpc for MPCService {
         let task_id = state
             .add_decrypt_task(&group_id, &name, &data, &data_type)
             .await?;
-        let task = state.get_task(&task_id).unwrap();
-        Ok(Response::new(format_task(&task_id, task, None, None)))
+        let task = state.get_task(&task_id).await?.unwrap();
+        Ok(Response::new(format_task(&task_id, &*task, None, None)))
     }
 
     async fn get_task(
@@ -143,10 +143,10 @@ impl Mpc for MPCService {
         if device_id.is_some() {
             state.get_repo().activate_device(device_id.unwrap()).await?;
         }
-        let task = state.get_task(&task_id).unwrap();
+        let task = state.get_task(&task_id).await?.unwrap();
         let request = Some(task.get_request());
 
-        let resp = format_task(&task_id, task, device_id, request);
+        let resp = format_task(&task_id, &*task, device_id, request);
         Ok(Response::new(resp))
     }
 
@@ -314,11 +314,10 @@ impl Mpc for MPCService {
                 let task_id = group_task.id;
                 state.send_updates(&task_id).await?;
                 // TODO: use group task
-                let Some(task): Option<GroupTask> = state.get_repo().get_task(&task_id).await?
-                else {
+                let Some(task) = state.get_task(&task_id).await? else {
                     return Err(Status::internal("Internal error"));
                 };
-                Ok(Response::new(format_task(&task_id, &task, None, None)))
+                Ok(Response::new(format_task(&task_id, &*task, None, None)))
             }
             Err(err) => {
                 error!("{}", err);
