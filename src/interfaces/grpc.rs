@@ -18,6 +18,7 @@ use tonic::transport::{Certificate, Identity, Server, ServerTlsConfig};
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
 
+use crate::persistence::NameValidator;
 use crate::proto::mpc_server::{Mpc, MpcServer};
 use crate::proto::{Group, KeyType, ProtocolType};
 use crate::state::State;
@@ -96,12 +97,9 @@ impl Mpc for MPCService {
         info!("SignRequest group_id={}", utils::hextrunc(&group_id));
 
         let mut state = self.state.lock().await;
-        if let Some(task_id) = state.add_sign_task(&group_id, &name, &data).await? {
-            let task = state.get_task(&task_id).unwrap();
-            Ok(Response::new(format_task(&task_id, task, None, None)))
-        } else {
-            Err(Status::failed_precondition("Request failed"))
-        }
+        let task_id = state.add_sign_task(&group_id, &name, &data).await?;
+        let task = state.get_task(&task_id).unwrap();
+        Ok(Response::new(format_task(&task_id, task, None, None)))
     }
 
     async fn decrypt(
@@ -116,15 +114,11 @@ impl Mpc for MPCService {
         info!("DecryptRequest group_id={}", utils::hextrunc(&group_id));
 
         let mut state = self.state.lock().await;
-        if let Some(task_id) = state
+        let task_id = state
             .add_decrypt_task(&group_id, &name, &data, &data_type)
-            .await?
-        {
-            let task = state.get_task(&task_id).unwrap();
-            Ok(Response::new(format_task(&task_id, task, None, None)))
-        } else {
-            Err(Status::failed_precondition("Request failed"))
-        }
+            .await?;
+        let task = state.get_task(&task_id).unwrap();
+        Ok(Response::new(format_task(&task_id, task, None, None)))
     }
 
     async fn get_task(
@@ -293,6 +287,12 @@ impl Mpc for MPCService {
                 .collect::<Vec<String>>(),
             threshold
         );
+        if !name.is_name_valid() {
+            error!("Group request with invalid group name {}", name);
+            return Err(Status::failed_precondition(format!(
+                "Invalid group name {name}"
+            )));
+        }
         let device_id_references: Vec<&[u8]> = device_ids
             .iter()
             .map(|device_id| device_id.as_ref())
@@ -301,7 +301,6 @@ impl Mpc for MPCService {
         match state
             .get_repo()
             .create_group_task(
-                &name,
                 &device_id_references,
                 threshold,
                 protocol.into(),
