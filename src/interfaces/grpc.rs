@@ -217,8 +217,9 @@ impl Mpc for MPCService {
         } else {
             state
                 .get_tasks()
+                .await?
                 .iter()
-                .map(|(task_id, task)| format_task(task_id, task.as_ref(), None, None))
+                .map(|task| format_task(task.get_id(), task.as_ref(), None, None))
                 .collect()
         };
 
@@ -301,6 +302,7 @@ impl Mpc for MPCService {
         match state
             .get_repo()
             .create_group_task(
+                None,
                 &device_id_references,
                 threshold,
                 protocol.into(),
