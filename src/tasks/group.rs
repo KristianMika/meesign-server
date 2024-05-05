@@ -97,7 +97,7 @@ impl GroupTask {
         self.protocol.advance(self.communicator.write().await);
     }
 
-    async fn finalize_task(&mut self) {
+    async fn finalize_task(&mut self, repository: Arc<Repository>) {
         let identifier = self.protocol.finalize(self.communicator.write().await);
         if identifier.is_none() {
             self.result = Some(Err("Task failed (group key not output)".to_string()));
@@ -121,24 +121,28 @@ impl GroupTask {
         );
 
         self.result = Some(Ok(Group::new(
-            identifier,
+            identifier.clone(),
             self.name.clone(),
             self.threshold,
             self.protocol.get_type(),
             self.key_type,
             certificate,
         )));
+        repository
+            .set_task_result(&self.id, Ok(identifier))
+            .await
+            .unwrap();
 
         self.communicator.write().await.clear_input();
     }
 
-    async fn next_round(&mut self) {
+    async fn next_round(&mut self, repository: Arc<Repository>) {
         if self.protocol.round() == 0 {
-            self.start_task();
+            self.start_task().await;
         } else if self.protocol.round() < self.protocol.last_round() {
             self.advance_task().await
         } else {
-            self.finalize_task().await
+            self.finalize_task(repository).await
         }
     }
 }
@@ -265,7 +269,7 @@ impl Task for GroupTask {
 
         if communicator.round_received() && self.protocol.round() <= self.protocol.last_round() {
             drop(communicator);
-            self.next_round();
+            self.next_round(repository.clone()).await;
             repository.increment_round(&self.id).await.unwrap(); // TODO: errorhandling
             return Ok(true);
         }
@@ -273,15 +277,16 @@ impl Task for GroupTask {
         Ok(false)
     }
 
-    async fn restart(&mut self) -> Result<bool, String> {
+    async fn restart(&mut self, repository: Arc<Repository>) -> Result<bool, String> {
         self.last_update = get_timestamp();
+        repository.set_task_last_update(&self.id).await.unwrap();
         if self.result.is_some() {
             return Ok(false);
         }
 
         if self.is_approved().await {
             self.attempts += 1;
-            self.start_task();
+            self.start_task().await;
             Ok(true)
         } else {
             Ok(false)
@@ -309,7 +314,7 @@ impl Task for GroupTask {
     }
 
     async fn waiting_for(&self, device: &[u8]) -> bool {
-        let mut communicator = self.communicator.write().await;
+        let communicator = self.communicator.write().await;
         if self.protocol.round() == 0 {
             return !communicator.device_decided(device);
         } else if self.protocol.round() >= self.protocol.last_round() {
@@ -328,13 +333,18 @@ impl Task for GroupTask {
         let mut communicator = self.communicator.write().await;
         communicator.decide(device_id, decision);
         self.last_update = get_timestamp();
+        repository.set_task_last_update(&self.id).await.unwrap();
         if self.result.is_none() && self.protocol.round() == 0 {
             if communicator.reject_count() > 0 {
                 self.result = Some(Err("Task declined".to_string()));
+                repository
+                    .set_task_result(&self.id, Err("Task declined".to_string()))
+                    .await
+                    .unwrap();
                 return Some(false);
             } else if communicator.accept_count() == self.devices.len() as u32 {
                 drop(communicator);
-                self.next_round();
+                self.next_round(repository).await;
                 return Some(true);
             }
         }
