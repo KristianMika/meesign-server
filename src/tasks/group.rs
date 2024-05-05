@@ -2,6 +2,7 @@ use crate::communicator::Communicator;
 use crate::error::Error;
 use crate::group::Group;
 use crate::persistence::Device;
+use crate::persistence::Repository;
 use crate::persistence::Task as TaskModel;
 use crate::proto;
 use crate::proto::{KeyType, ProtocolType, TaskType};
@@ -11,13 +12,14 @@ use crate::protocols::gg18::GG18Group;
 use crate::protocols::Protocol;
 use crate::tasks::{Task, TaskResult, TaskStatus};
 use crate::{get_timestamp, utils};
+use async_trait::async_trait;
 use log::{info, warn};
 use meesign_crypto::proto::{Message as _, ProtocolMessage};
 use prost::Message as _;
 use std::io::Read;
 use std::process::{Command, Stdio};
 use std::sync::Arc;
-use std::sync::RwLock;
+use tokio::sync::RwLock;
 use uuid::Uuid;
 
 pub struct GroupTask {
@@ -86,20 +88,17 @@ impl GroupTask {
         })
     }
 
-    fn start_task(&mut self) {
+    async fn start_task(&mut self) {
         self.protocol
-            .initialize(&mut self.communicator.write().unwrap(), &[]);
+            .initialize(self.communicator.write().await, &[]);
     }
 
-    fn advance_task(&mut self) {
-        self.protocol
-            .advance(&mut self.communicator.write().unwrap());
+    async fn advance_task(&mut self) {
+        self.protocol.advance(self.communicator.write().await);
     }
 
-    fn finalize_task(&mut self) {
-        let identifier = self
-            .protocol
-            .finalize(&mut self.communicator.write().unwrap());
+    async fn finalize_task(&mut self) {
+        let identifier = self.protocol.finalize(self.communicator.write().await);
         if identifier.is_none() {
             self.result = Some(Err("Task failed (group key not output)".to_string()));
             return;
@@ -130,16 +129,16 @@ impl GroupTask {
             certificate,
         )));
 
-        self.communicator.write().unwrap().clear_input();
+        self.communicator.write().await.clear_input();
     }
 
-    fn next_round(&mut self) {
+    async fn next_round(&mut self) {
         if self.protocol.round() == 0 {
             self.start_task();
         } else if self.protocol.round() < self.protocol.last_round() {
-            self.advance_task()
+            self.advance_task().await
         } else {
-            self.finalize_task()
+            self.finalize_task().await
         }
     }
 }
@@ -171,6 +170,8 @@ fn create_protocol(
     };
     Ok(protocol)
 }
+
+#[async_trait]
 impl Task for GroupTask {
     fn get_status(&self) -> TaskStatus {
         match &self.result {
@@ -217,14 +218,14 @@ impl Task for GroupTask {
         TaskType::Group
     }
 
-    fn get_work(&self, device_id: Option<&[u8]>) -> Option<Vec<u8>> {
-        if device_id.is_none() || !self.waiting_for(device_id.unwrap()) {
+    async fn get_work(&self, device_id: Option<&[u8]>) -> Option<Vec<u8>> {
+        if device_id.is_none() || !self.waiting_for(device_id.unwrap()).await {
             return None;
         }
 
         self.communicator
             .read()
-            .unwrap()
+            .await
             .get_message(device_id.unwrap())
     }
 
@@ -236,18 +237,23 @@ impl Task for GroupTask {
         }
     }
 
-    fn get_decisions(&self) -> (u32, u32) {
-        let communicator = self.communicator.read().unwrap();
+    async fn get_decisions(&self) -> (u32, u32) {
+        let communicator = self.communicator.read().await;
         (communicator.accept_count(), communicator.reject_count())
     }
 
-    fn update(&mut self, device_id: &[u8], data: &[u8]) -> Result<bool, String> {
-        let mut communicator = self.communicator.write().unwrap();
+    async fn update(
+        &mut self,
+        device_id: &[u8],
+        data: &[u8],
+        repository: Arc<Repository>,
+    ) -> Result<bool, String> {
+        let mut communicator = self.communicator.write().await;
         if communicator.accept_count() != self.devices.len() as u32 {
             return Err("Not enough agreements to proceed with the protocol.".to_string());
         }
 
-        if !self.waiting_for(device_id) {
+        if !self.waiting_for(device_id).await {
             return Err("Wasn't waiting for a message from this ID.".to_string());
         }
 
@@ -255,23 +261,25 @@ impl Task for GroupTask {
             ProtocolMessage::decode(data).map_err(|_| String::from("Expected ProtocolMessage."))?;
         communicator.receive_messages(device_id, data.message);
         self.last_update = get_timestamp();
+        repository.set_task_last_update(&self.id).await.unwrap(); // TODO: errorhandling
 
         if communicator.round_received() && self.protocol.round() <= self.protocol.last_round() {
             drop(communicator);
             self.next_round();
+            repository.increment_round(&self.id).await.unwrap(); // TODO: errorhandling
             return Ok(true);
         }
 
         Ok(false)
     }
 
-    fn restart(&mut self) -> Result<bool, String> {
+    async fn restart(&mut self) -> Result<bool, String> {
         self.last_update = get_timestamp();
         if self.result.is_some() {
             return Ok(false);
         }
 
-        if self.is_approved() {
+        if self.is_approved().await {
             self.attempts += 1;
             self.start_task();
             Ok(true)
@@ -284,8 +292,8 @@ impl Task for GroupTask {
         self.last_update
     }
 
-    fn is_approved(&self) -> bool {
-        self.communicator.read().unwrap().accept_count() == self.devices.len() as u32
+    async fn is_approved(&self) -> bool {
+        self.communicator.read().await.accept_count() == self.devices.len() as u32
     }
 
     fn has_device(&self, device_id: &[u8]) -> bool {
@@ -300,8 +308,8 @@ impl Task for GroupTask {
         &self.devices
     }
 
-    fn waiting_for(&self, device: &[u8]) -> bool {
-        let mut communicator = self.communicator.write().unwrap();
+    async fn waiting_for(&self, device: &[u8]) -> bool {
+        let mut communicator = self.communicator.write().await;
         if self.protocol.round() == 0 {
             return !communicator.device_decided(device);
         } else if self.protocol.round() >= self.protocol.last_round() {
@@ -311,8 +319,13 @@ impl Task for GroupTask {
         communicator.waiting_for(device)
     }
 
-    fn decide(&mut self, device_id: &[u8], decision: bool) -> Option<bool> {
-        let mut communicator = self.communicator.write().unwrap();
+    async fn decide(
+        &mut self,
+        device_id: &[u8],
+        decision: bool,
+        repository: Arc<Repository>,
+    ) -> Option<bool> {
+        let mut communicator = self.communicator.write().await;
         communicator.decide(device_id, decision);
         self.last_update = get_timestamp();
         if self.result.is_none() && self.protocol.round() == 0 {
@@ -328,14 +341,14 @@ impl Task for GroupTask {
         None
     }
 
-    fn acknowledge(&mut self, device_id: &[u8]) {
-        self.communicator.write().unwrap().acknowledge(device_id);
+    async fn acknowledge(&mut self, device_id: &[u8]) {
+        self.communicator.write().await.acknowledge(device_id);
     }
 
-    fn device_acknowledged(&self, device_id: &[u8]) -> bool {
+    async fn device_acknowledged(&self, device_id: &[u8]) -> bool {
         self.communicator
             .read()
-            .unwrap()
+            .await
             .device_acknowledged(device_id)
     }
 

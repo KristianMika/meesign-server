@@ -2,6 +2,7 @@ use crate::communicator::Communicator;
 use crate::proto::ProtocolType;
 use crate::protocols::Protocol;
 use meesign_crypto::proto::{Message, ProtocolGroupInit, ProtocolInit};
+use tokio::sync::RwLockWriteGuard;
 
 pub struct GG18Group {
     parties: u32,
@@ -20,7 +21,7 @@ impl GG18Group {
 }
 
 impl Protocol for GG18Group {
-    fn initialize(&mut self, communicator: &mut Communicator, _: &[u8]) {
+    fn initialize(&mut self, mut communicator: RwLockWriteGuard<'_, Communicator>, _: &[u8]) {
         communicator.set_active_devices(None);
         let parties = self.parties;
         let threshold = self.threshold;
@@ -37,14 +38,14 @@ impl Protocol for GG18Group {
         self.round = 1;
     }
 
-    fn advance(&mut self, communicator: &mut Communicator) {
+    fn advance(&mut self, mut communicator: RwLockWriteGuard<'_, Communicator>) {
         assert!((0..self.last_round()).contains(&self.round));
 
         communicator.relay();
         self.round += 1;
     }
 
-    fn finalize(&mut self, communicator: &mut Communicator) -> Option<Vec<u8>> {
+    fn finalize(&mut self, communicator: RwLockWriteGuard<'_, Communicator>) -> Option<Vec<u8>> {
         assert_eq!(self.last_round(), self.round);
         self.round += 1;
         communicator.get_final_message()
@@ -74,7 +75,7 @@ impl GG18Sign {
 }
 
 impl Protocol for GG18Sign {
-    fn initialize(&mut self, communicator: &mut Communicator, data: &[u8]) {
+    fn initialize(&mut self, mut communicator: RwLockWriteGuard<'_, Communicator>, data: &[u8]) {
         communicator.set_active_devices(None);
         let participant_indices = communicator.get_protocol_indices();
         communicator.send_all(|idx| {
@@ -90,14 +91,14 @@ impl Protocol for GG18Sign {
         self.round = 1;
     }
 
-    fn advance(&mut self, communicator: &mut Communicator) {
+    fn advance(&mut self, mut communicator: RwLockWriteGuard<'_, Communicator>) {
         assert!((0..self.last_round()).contains(&self.round));
 
         communicator.relay();
         self.round += 1;
     }
 
-    fn finalize(&mut self, communicator: &mut Communicator) -> Option<Vec<u8>> {
+    fn finalize(&mut self, communicator: RwLockWriteGuard<'_, Communicator>) -> Option<Vec<u8>> {
         assert_eq!(self.last_round(), self.round);
         self.round += 1;
         communicator.get_final_message()
