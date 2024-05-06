@@ -8,6 +8,7 @@ pub struct Group {
     protocol: ProtocolType,
     key_type: KeyType,
     certificate: Option<Vec<u8>>,
+    note: Option<String>,
 }
 
 impl Group {
@@ -18,6 +19,7 @@ impl Group {
         protocol: ProtocolType,
         key_type: KeyType,
         certificate: Option<Vec<u8>>,
+        note: Option<String>,
     ) -> Self {
         assert!(!identifier.is_empty());
         assert!(threshold >= 1);
@@ -28,6 +30,7 @@ impl Group {
             protocol,
             key_type,
             certificate,
+            note,
         }
     }
 
@@ -58,6 +61,10 @@ impl Group {
 
     pub fn certificate(&self) -> Option<&Vec<u8>> {
         self.certificate.as_ref()
+    }
+
+    pub fn note(&self) -> Option<&str> {
+        self.note.as_deref()
     }
 }
 
@@ -92,6 +99,7 @@ mod tests {
             2,
             ProtocolType::Gg18,
             KeyType::SignPdf,
+            None,
             None,
         );
     }
@@ -128,6 +136,7 @@ mod tests {
             protocol_type,
             key_type,
             None,
+            Some("time policy".into()),
         );
         assert_eq!(group.identifier(), &identifier);
         assert_eq!(group.name(), &name);

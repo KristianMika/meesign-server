@@ -287,6 +287,7 @@ impl Mpc for MPCService {
         let threshold = request.threshold;
         let protocol = ProtocolType::try_from(request.protocol).unwrap();
         let key_type = KeyType::try_from(request.key_type).unwrap();
+        let note = None; // TODO
 
         info!(
             "GroupRequest name={:?} device_ids={:?} threshold={}",
@@ -310,6 +311,7 @@ impl Mpc for MPCService {
                 threshold,
                 protocol.into(),
                 key_type.into(),
+                note,
             )
             .await
         {
