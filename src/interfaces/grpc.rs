@@ -18,6 +18,7 @@ use tonic::transport::{Certificate, Identity, Server, ServerTlsConfig};
 use tonic::{Request, Response, Status};
 use uuid::Uuid;
 
+use crate::persistence::DeviceKind;
 use crate::proto::mpc_server::{Mpc, MpcServer};
 use crate::proto::{Group, KeyType, ProtocolType};
 use crate::state::State;
@@ -58,6 +59,7 @@ impl Mpc for MPCService {
         let request = request.into_inner();
         let name = request.name;
         let csr = request.csr;
+        let kind = DeviceKind::User; // TODO
         info!("RegistrationRequest name={:?}", name);
 
         let state = self.state.lock().await;
@@ -66,7 +68,7 @@ impl Mpc for MPCService {
             let identifier = cert_to_id(&certificate);
             match state
                 .get_repo()
-                .add_device(&identifier, &name, &certificate)
+                .add_device(&identifier, &name, &kind, &certificate)
                 .await
             {
                 Ok(_) => Ok(Response::new(msg::RegistrationResponse {

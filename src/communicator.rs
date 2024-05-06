@@ -298,6 +298,8 @@ impl Communicator {
 
 #[cfg(test)]
 mod tests {
+    use crate::persistence::DeviceKind;
+
     use super::*;
 
     #[test]
@@ -532,7 +534,14 @@ mod tests {
     fn prepare_devices(n: usize) -> Vec<Device> {
         assert!(n < u8::MAX as usize);
         (0..n)
-            .map(|i| Device::new(vec![i as u8], format!("d{}", i), vec![0xf0 | i as u8]))
+            .map(|i| {
+                Device::new(
+                    vec![i as u8],
+                    format!("d{}", i),
+                    DeviceKind::User,
+                    vec![0xf0 | i as u8],
+                )
+            })
             .collect()
     }
 }
