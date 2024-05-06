@@ -286,12 +286,11 @@ impl Task for SignTask {
         self.attempts
     }
 
-    fn from_model(
+    async fn from_model(
         model: crate::persistence::Task,
         devices: Vec<Device>,
         communicator: Arc<RwLock<Communicator>>,
         repository: Arc<Repository>,
-        task_id: Uuid,
     ) -> Result<Self, crate::error::Error>
     where
         Self: Sized,
