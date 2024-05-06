@@ -1,6 +1,8 @@
 use crate::communicator::Communicator;
+use crate::error::Error;
 use crate::proto::ProtocolType;
 use crate::protocols::Protocol;
+use async_trait::async_trait;
 use meesign_crypto::proto::{Message, ProtocolGroupInit, ProtocolInit};
 use tokio::sync::RwLockWriteGuard;
 
@@ -20,8 +22,13 @@ impl ElgamalGroup {
     }
 }
 
+#[async_trait]
 impl Protocol for ElgamalGroup {
-    fn initialize(&mut self, mut communicator: RwLockWriteGuard<'_, Communicator>, _: &[u8]) {
+    async fn initialize(
+        &mut self,
+        mut communicator: RwLockWriteGuard<'_, Communicator>,
+        _: &[u8],
+    ) -> Result<(), Error> {
         communicator.set_active_devices(None);
         let parties = self.parties;
         let threshold = self.threshold;
@@ -36,19 +43,27 @@ impl Protocol for ElgamalGroup {
         });
 
         self.round = 1;
+        Ok(())
     }
 
-    fn advance(&mut self, mut communicator: RwLockWriteGuard<'_, Communicator>) {
+    async fn advance(
+        &mut self,
+        mut communicator: RwLockWriteGuard<'_, Communicator>,
+    ) -> Result<(), Error> {
         assert!((0..self.last_round()).contains(&self.round));
 
         communicator.relay();
         self.round += 1;
+        Ok(())
     }
 
-    fn finalize(&mut self, communicator: RwLockWriteGuard<'_, Communicator>) -> Option<Vec<u8>> {
+    async fn finalize(
+        &mut self,
+        communicator: RwLockWriteGuard<'_, Communicator>,
+    ) -> Result<Option<Vec<u8>>, Error> {
         assert_eq!(self.last_round(), self.round);
         self.round += 1;
-        communicator.get_final_message()
+        Ok(communicator.get_final_message())
     }
 
     fn round(&self) -> u16 {
@@ -74,8 +89,13 @@ impl ElgamalDecrypt {
     }
 }
 
+#[async_trait]
 impl Protocol for ElgamalDecrypt {
-    fn initialize(&mut self, mut communicator: RwLockWriteGuard<'_, Communicator>, data: &[u8]) {
+    async fn initialize(
+        &mut self,
+        mut communicator: RwLockWriteGuard<'_, Communicator>,
+        data: &[u8],
+    ) -> Result<(), Error> {
         communicator.set_active_devices(None);
         let participant_indices = communicator.get_protocol_indices();
         communicator.send_all(|idx| {
@@ -89,19 +109,27 @@ impl Protocol for ElgamalDecrypt {
         });
 
         self.round = 1;
+        Ok(())
     }
 
-    fn advance(&mut self, mut communicator: RwLockWriteGuard<'_, Communicator>) {
+    async fn advance(
+        &mut self,
+        mut communicator: RwLockWriteGuard<'_, Communicator>,
+    ) -> Result<(), Error> {
         assert!((0..self.last_round()).contains(&self.round));
 
         communicator.relay();
         self.round += 1;
+        Ok(())
     }
 
-    fn finalize(&mut self, communicator: RwLockWriteGuard<'_, Communicator>) -> Option<Vec<u8>> {
+    async fn finalize(
+        &mut self,
+        communicator: RwLockWriteGuard<'_, Communicator>,
+    ) -> Result<Option<Vec<u8>>, Error> {
         assert_eq!(self.last_round(), self.round);
         self.round += 1;
-        communicator.get_final_message()
+        Ok(communicator.get_final_message())
     }
 
     fn round(&self) -> u16 {
