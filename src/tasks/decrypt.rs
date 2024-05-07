@@ -283,4 +283,8 @@ impl Task for DecryptTask {
     fn get_communicator(&self) -> Arc<RwLock<Communicator>> {
         todo!()
     }
+
+    fn get_threshold(&self) -> u32 {
+        self.group.threshold()
+    }
 }
