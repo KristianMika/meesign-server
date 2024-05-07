@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use crate::communicator::Communicator;
+use crate::error::Error;
 use crate::group::Group;
 use crate::persistence::{Device, Repository};
 use crate::proto::{ProtocolType, SignRequest, TaskType};
@@ -122,17 +123,21 @@ impl SignTask {
         &mut self,
         device_id: &[u8],
         data: &[u8],
-    ) -> Result<bool, String> {
+    ) -> Result<bool, Error> {
         if self.communicator.accept_count() < self.group.threshold() {
-            return Err("Not enough agreements to proceed with the protocol.".to_string());
+            return Err(Error::GeneralProtocolError(
+                "Not enough agreements to proceed with the protocol.".into(),
+            ));
         }
 
         if !self.waiting_for(device_id).await {
-            return Err("Wasn't waiting for a message from this ID.".to_string());
+            return Err(Error::GeneralProtocolError(
+                "Wasn't waiting for a message from this ID.".into(),
+            ));
         }
 
-        let data =
-            ProtocolMessage::decode(data).map_err(|_| String::from("Expected ProtocolMessage."))?;
+        let data = ProtocolMessage::decode(data)
+            .map_err(|_| Error::GeneralProtocolError("Expected ProtocolMessage.".into()))?;
         self.communicator.receive_messages(device_id, data.message);
         self.last_update = get_timestamp();
 
@@ -206,7 +211,7 @@ impl Task for SignTask {
         device_id: &[u8],
         data: &[u8],
         repository: Arc<Repository>,
-    ) -> Result<bool, String> {
+    ) -> Result<bool, Error> {
         let result = self.update_internal(device_id, data).await;
         if let Ok(true) = result {
             self.next_round(repository);
